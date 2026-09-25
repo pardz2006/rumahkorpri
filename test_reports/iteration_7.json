@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 7: verified seeded logins (Bank DKI, Bank BTN, developer2, developer3), share-simulation flow, public share page /s/{token}, and DP-reminder cron. Backend pytest test_iteration7_features.py: 15/15 PASS. Frontend Playwright: PublicSimulation renders data-testid=public-sim-label, tiered schedule (4 rows for fs_flat 20yr), and public-sim-pdf downloads simulasi-kpr.pdf. Consumer portal Riwayat sim-share-{id} button opens api.whatsapp.com share URL with correct text. Bank DKI (bankdki@rumahkorpri.com/dki123) logs in successfully and lands on /btn dashboard which shows KPR applications (Total Pengajuan 1). DP-reminder cron: after synthetically forcing a booking to spr_status=issued with a termin due within 3 days, POST /api/cron/dp-reminders (no auth) returns {ok:true, reminded:>=1}, marks termin reminded=true, writes wa_logs row with template='dp_due_reminder'; a second invocation is idempotent (does not re-remind).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/btn dashboard when logged in as Bank DKI user", "issues": ["Header still reads 'Dashboard Analis Bank BTN' even when logged in as Bank DKI. Per MVP design both banks share the dashboard, but the title should probably read the user's bank (e.g. 'Dashboard Analis {bank}'). Non-blocking."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration7_features.py",
+    "/app/test_reports/pytest/iteration7.xml"
+  ],
+  "action_items": [
+    "(Nice-to-have) Personalize BTN dashboard header/title to reflect the user's bank field so Bank DKI users don't see 'Bank BTN' branding.",
+    "(Optional) On the cron endpoint, consider light shared-secret header/IP allow-list — currently /api/cron/dp-reminders is fully unauthenticated and could be spammed publicly."
+  ],
+  "critical_code_review_comments": [
+    "server.py public_simulation: sim.get('user_id') exists but ObjectId(sim['user_id']) will raise if user_id is malformed; low risk but wrap in try/except for robustness.",
+    "cron_dp_reminders lacks any auth/shared secret; anyone on the internet can hit it. It is idempotent per termin so damage is minimal, but consider a header token check.",
+    "wa_log inside cron loop is awaited sequentially per termin; for many due termins this serializes Twilio round-trips. Consider asyncio.gather or a background queue.",
+    "PublicSimulation.js calls /kpr/simulate/pdf which is public — fine, but for very large tenors returning full PDF blob may be heavy on the client. Acceptable for MVP."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration7_features.py",
+    "/app/test_reports/iteration_7.json"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (public page, PDF download, sim-share, Bank DKI dashboard)"},
+  "test_credentials": "consumer@rumahkorpri.com/consumer123, bankdki@rumahkorpri.com/dki123, btn@rumahkorpri.com/btn123, developer2@rumahkorpri.com/developer123, developer3@rumahkorpri.com/developer123",
+  "seed_data_creation": "Creates + deletes a TEST_iter7_ui / TEST_iter7_share / TEST_iter7_reg labeled sim each run. DP cron test mutates an existing booking's dp_termins[0].due_date temporarily (or inserts a synthetic booking + cleans it up) and wipes matching wa_logs of template 'dp_due_reminder' before running so re-runs stay clean.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 7 features (share link + public /s/{token} + DP reminder cron) all pass. Public route path is /s/:token. Consumer sim-share button opens https://api.whatsapp.com/send/?text=... in a new tab (page.context.expect_page). Bank DKI role is btn_evaluator; both BTN & DKI land on /btn — dashboard title is currently generic 'Analis Bank BTN'. Twilio trial is enabled, so wa_logs from /api/cron/dp-reminders may have status='failed' with channel='twilio' — that is expected and the endpoint still returns 200. Login token key remains 'token'. Project detail route remains /proyek/{id}. Seed resets on backend restart.",
+  "rca of the issue": "No bugs found this iteration."
+}

@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 6: Verified saved simulations (POST/GET/DELETE /api/simulations), editable domicile profile (PATCH /api/profile) with project re-sort by city then province, and Twilio test-send (/api/whatsapp/status + /api/whatsapp/test). Backend: 10/10 pytest PASS in test_iteration6_features.py. Frontend Playwright: consumer /portal profile-domicile-card editable & saves; tab-riwayat lists saved sims; sim-save on project detail persists sim; sim-compare-panel appears when 2+ sims checked; sim-delete removes item. CRM /crm tab-wa shows wa-channel-status='WhatsApp aktif via Twilio', wa-test-box lets admin submit and shows a graceful toast on Twilio 422 trial error (no crash, no 500). Non-admin (developer) gets 403 on /api/whatsapp/test as required.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6_features.py",
+    "/app/test_reports/pytest/iteration6.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py delete_simulation & update_profile: ObjectId(sim_id/user_id) without try/except → invalid id string will raise bson.errors.InvalidId → 500. Wrap with try/except to return 400/404.",
+    "_domicile_score uses substring match on city (e.g. 'depok' in location string). If a project location contains city name as a substring inside another word this could false-positive; consider tokenizing. Not blocking with current seed data.",
+    "save_simulation stores full amortization schedule inside the sim doc — for 30-yr tenor that's 360 rows × ~5 fields. GET /api/simulations returns all sims including full schedules; can bloat payload once user has many sims. Consider trimming schedule from list endpoint and expose via GET /simulations/{id}.",
+    "whatsapp_test does not validate phone format; user typing invalid string still forwards to Twilio and gets 422. Consider basic E.164 regex validation.",
+    "PATCH /api/profile allows arbitrary user to change instansi and monthly_income without any verification workflow — acceptable for MVP but worth flagging."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration6_features.py",
+    "/app/test_reports/iteration_6.json"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (profile save, tabs, sim-save, riwayat listing, compare panel, delete, CRM wa-status + test-send toast)"},
+  "test_credentials": "pardz2006@gmail.com/korpri123, consumer@rumahkorpri.com/consumer123, developer@rumahkorpri.com/developer123, btn@rumahkorpri.com/btn123",
+  "seed_data_creation": "Test creates + deletes a TEST_ labeled simulation per run. Profile city ends set at 'Bekasi' (matches seed reset). No permanent seed added.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Project detail route is /proyek/{id} (Indonesian, NOT /project/). Login token key is 'token'. Twilio is now enabled=true (trial); /api/whatsapp/test returns 200 with status:'failed'+error string for unverified numbers — this is expected. Delete simulation uses window.confirm() dialog on frontend — accept it in Playwright via page.on('dialog', d.accept()). Seed resets consumer city to Bekasi on backend restart; save profile with city=Depok to test re-sort putting Bumi ASN Residence first.",
+  "rca of the issue": "No bugs found this iteration."
+}

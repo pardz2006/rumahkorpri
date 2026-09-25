@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 5: Tested 3 new KPR features - (1) tiered rate KPR simulate with new Komersial promo scheme (2.65% fix yrs 1-3 → 5% yrs 4-5 → 7.5% yrs 6-8 → 9.99% cap; FLPP flat 5%), (2) POST /api/kpr/amortization returning 12*tenor months with pokok/bunga/sisa, (3) POST /api/kpr/simulate/pdf returning valid application/pdf. Also validated Twilio fallback: /api/whatsapp/status returns {enabled:false, channel:'simulasi'} and /api/bookings/{id}/followup returns channel:'simulasi' + writes wa_log entry. Backend: 7/7 pytest in test_kpr_amort_pdf_wa.py PASS (created full end-to-end booking→pay→SPR flow inside followup test to establish precondition, since there were no pre-existing bookings). Frontend Playwright on Bumi ASN Residence (Komersial project id 6ab67c0bab7b919b111d5f8b): kpr-simulator renders full tiered schedule (2.65% → 5% → 7.5% → 9.99% floating maks), sim-toggle-amortization loads sim-amortization-table with 180 rows (tenor 15y × 12), sim-download-pdf triggers a real download 'simulasi-kpr.pdf' 4076 bytes. Admin_korpri login → /crm → tab-wa → wa-channel-status shows amber 'Mode simulasi — kredensial Twilio belum diisi' badge and existing wa-log entries render (spr_issued, doc_reminder, payment_confirmed all channel=simulasi).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_kpr_amort_pdf_wa.py",
+    "/app/test_reports/pytest/iteration5.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "kpr.amortization_schedule: month principal is computed as installment-interest but installment is a rounded int from simulate(); over many months the tiny fractional error accumulates. Final month balance is 4-5k IDR (well within rupiah rounding tolerance), acceptable but note this in docs. Consider forcing the last month's principal := balance to guarantee balance=0.",
+    "kpr_pdf.generate_kpr_pdf: yearly table columns array `cols=[22,40,62,100,138,170]` uses mm coordinates that leave the last column (Sisa Pokok at 170mm) close to right margin (210mm A4); with tenor 30y a large rupiah value like 'Rp 1.234.567.890' may overflow. Consider right-aligning or shrinking font.",
+    "kpr_pdf: `_table_header` draws at same y as table title line before decrementing, which is fine, but hard-coded column x's are shared between two different tables (schedule uses [24,62,90,118], yearly uses [22,40,...]) — encapsulate a small table helper for maintainability.",
+    "whatsapp.py: TWILIO_* module-level constants are read once at import; if .env changes, backend restart is required (already documented). is_enabled() therefore cannot toggle at runtime — fine for now.",
+    "payment_webhook is a public unauthenticated endpoint (as before) — same finding as iter4 for dp_termin path; not part of this iteration's scope but flagged again."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_kpr_amort_pdf_wa.py"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (KPR simulator tiered schedule + amortization + PDF download + WA simulasi badge all verified)"},
+  "test_credentials": "pardz2006@gmail.com/korpri123, consumer@rumahkorpri.com/consumer123, developer@rumahkorpri.com/developer123, btn@rumahkorpri.com/btn123",
+  "seed_data_creation": "Followup test creates a fresh booking via consumer, marks it paid via /payments/webhook, and approves SPR as admin so wa-logs get seeded. This adds one new booking with 6 missing docs and 3 wa-logs (spr_issued, payment_confirmed, doc_reminder) to the DB every run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login response key is 'token' (not 'access_token'). Backend pytest.ini enables xdist; use `-o addopts=''` when running create→read shared-state tests. REACT_APP_BACKEND_URL must be exported before pytest (BASE_URL=os.environ['REACT_APP_BACKEND_URL']). Frontend testids used: kpr-simulator, sim-program-KOMERSIAL, sim-program-FLPP, sim-toggle-amortization, sim-amortization-table, sim-download-pdf, tab-berkas, tab-wa, wa-channel-status, wa-log-{id}, crm-followup-{bid}. CRM route is /crm (not /korpri). Followup test builds precondition end-to-end; no manual seeding needed.",
+  "rca of the issue": "No bugs found this iteration."
+}

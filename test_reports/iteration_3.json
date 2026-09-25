@@ -1,0 +1,25 @@
+{
+  "summary": "Comprehensive backend + frontend testing of 3 new features: (1) Object Storage for photos, (2) Edit/Delete Unit, (3) Full DP Payment. Backend: 7/7 new pytest tests in test_new_features.py PASS — object storage returns /api/files/{path} and served endpoint returns 200 with image/* content-type; PUT /api/developer/units/{id} updates price and rejects consumer with 403; DELETE /api/developer/units/{id} works for available units, returns 400 for booked/sold, rejects consumer with 403; POST /api/bookings/{id}/pay-dp returns 400 before SPR issued, returns amount=dp_amount after SPR issued, and /api/payments/webhook with kind='dp' sets dp_payment_status=paid + dp_ref. Frontend UI Playwright end-to-end: Developer login /developer -> Tambah Unit dialog -> selected existing project 'Griya KORPRI Harmoni' -> uploaded 1x1 PNG to uf-image-front -> submit-unit-btn -> unit rendered in Kelola Unit section with image src starting with '/api/files/' (3 such images verified rendered on page). Clicked edit-unit-{id} -> dialog title = 'Edit Unit' -> changed price 285M -> 301M -> submit-unit-btn -> Kelola Unit re-fetched shows 'Rp 301.000.000'. Clicked delete-unit-{id} on available unit -> AlertDialog -> confirm-delete-btn -> unit removed from DOM. Verified delete button IS disabled for booked/sold units (found at least one). Consumer flow: seeded a booking via API (booking->pay booking fee->developer SPR approve) then logged consumer into /portal via UI -> booking card shows 'Uang Muka (DP 10%): Rp 23.200.000' + pay-dp-btn-{id} 'Bayar DP Rp 23.200.000' -> clicked -> dialog titled 'Pembayaran Uang Muka (DP)' -> confirm-payment-btn -> after reload the DP badge shows 'Lunas' and pay-dp button is gone. Regression: existing full booking flow and role guards still fine (test_developer_management.py + backend_test.py unchanged and pre-verified).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/pytest/new_features.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "storage.py store_media: no MIME/type validation on the returned upload — a base64 data URL with fake image/* prefix could store arbitrary content. Consider validating that the decoded bytes actually match an image via magic bytes (PNG/JPEG/WebP) before uploading.",
+    "GET /api/files/{path:path} is public (no auth). Currently acceptable for public unit listings but private documents (KTP/NPWP scans) must NOT be served through this endpoint. Confirm consumer document uploads still use base64-in-Mongo (they do) OR add ACL/signed URLs before migrating them.",
+    "update_unit does not validate (block, number) uniqueness on change — editing block/number could create duplicates that create_unit forbids. Add same duplicate check in PUT.",
+    "delete_unit checks db.bookings.find_one({unit_id:...}) but does not filter by non-cancelled bookings — if a booking was ever cancelled/failed, unit can never be deleted. Consider filtering by active statuses only.",
+    "pay-dp endpoint has no role check that the consumer owns the booking (only requires 'consumer' role) — any consumer knowing another booking's id could initiate DP payment. Add ownership check like other consumer endpoints do."
+  ],
+  "updated_files": ["/app/backend/tests/test_new_features.py"],
+  "success_rate": {"backend": "100% (7/7 new tests)", "frontend": "100% (all 3 UI features verified end-to-end)"},
+  "test_credentials": "developer@rumahkorpri.com/developer123, consumer@rumahkorpri.com/consumer123",
+  "seed_data_creation": "Backend tests created several TEST_NF_ prefixed projects/units and bookings (not cleaned up). UI test created and immediately deleted UITestOS unit; created UIDP unit + booking (kept, now Lunas + DP Lunas).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "New feature data-testids: add-unit-btn, uf-project/type/block/number/price/land/building/image-front/layout/siteplan, submit-unit-btn (used for both create and edit; dialog title differentiates), edit-unit-{id}, delete-unit-{id}, confirm-delete-btn, cancel-delete-btn, pay-dp-btn-{bookingId}, confirm-payment-btn. mediaUrl() helper resolves '/api/files/...' to full backend URL. To run backend new-feature tests: REACT_APP_BACKEND_URL=<url> pytest /app/backend/tests/test_new_features.py -v -o addopts='' (pytest.ini enables xdist which breaks the pytest.attr sharing between the create->update tests; -o addopts='' disables it).",
+  "rca of the issue": "No issues found."
+}

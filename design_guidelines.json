@@ -1,0 +1,51 @@
+{
+  "app_name": "Sistem Pemesanan Rumah & CRM Rumah KORPRI",
+  "theme": "light",
+  "archetype": "ORGANIC & EARTHY",
+  "colors": {
+    "primary": "#0F5132",
+    "primary_hover": "#146c43",
+    "secondary": "#D1E7DD",
+    "accent": "#C05621",
+    "background": "#F8FAF9",
+    "card_bg": "#FFFFFF",
+    "text_main": "#1A202C",
+    "text_muted": "#4A5568",
+    "border": "#E2E8F0"
+  },
+  "typography": {
+    "font_family_headings": "Outfit, sans-serif",
+    "font_family_body": "Inter, sans-serif",
+    "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-bold",
+    "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-bold",
+    "h3": "text-xl sm:text-2xl font-semibold",
+    "body": "text-base text-slate-700"
+  },
+  "visual_enhancers": {
+    "border_radius": "rounded-xl",
+    "glassmorphism": "backdrop-blur-xl bg-white/80 border border-slate-200/60 shadow-lg",
+    "card_style": "bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200"
+  },
+  "image_urls": {
+    "hero_banner": "https://images.unsplash.com/photo-1613553507747-5f8d62ad5904?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "housing_aerial": "https://images.pexels.com/photos/3918373/pexels-photo-3918373.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "urban_city": "https://images.unsplash.com/photo-1671342986427-b022491735c2?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "stakeholders": [
+    "Peminat / Pembeli (ASN KORPRI)",
+    "Admin / CRM KORPRI",
+    "Mitra Developer",
+    "Bank BTN Credit Evaluator"
+  ],
+  "key_features": [
+    "Landing Page with KPR Simulator (FLPP & Komersial)",
+    "Project & Unit Listing with Availability status (Available/Booked/Sold)",
+    "Simulated Booking Fee via QRIS / Virtual Account",
+    "Auto-Generated Surat Pemesanan Rumah (SPR) PDF",
+    "Consumer Portal for Bookings & Document Upload",
+    "CRM Dashboard for KORPRI Admin (Document checklist & follow-up)",
+    "Developer Dashboard for SPR approval & digital signatures",
+    "Bank BTN Evaluator Dashboard (Pre-Approved / Approved / Rejected / Need Revision)",
+    "WhatsApp Notification Simulator & In-App Activity Log"
+  ]
+}
