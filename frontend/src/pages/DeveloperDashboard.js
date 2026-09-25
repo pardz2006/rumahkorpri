@@ -83,14 +83,14 @@ export default function DeveloperDashboard() {
   const [editUnitId, setEditUnitId] = useState(null);
   const [deleteUnit, setDeleteUnit] = useState(null);
   const [saving, setSaving] = useState(false);
-  const emptyProject = { name: "", location: "", address_detail: "", developer_name: "", description: "", image: null, program: "KOMERSIAL" };
+  const emptyProject = { name: "", location: "", address_detail: "", developer_name: "", description: "", image: null, program: "KOMERSIAL", bank: "Bank BTN" };
   const emptyUnit = { project_id: "", type: "", block: "", number: "", price: "", land_area: "", building_area: "", address_detail: "", image_front: null, image_layout: null, image_siteplan: null };
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [unitForm, setUnitForm] = useState(emptyUnit);
 
   const load = () => {
     api.get("/developer/spr-queue").then((r) => setQueue(r.data)).catch(() => {});
-    api.get("/projects").then((r) => setProjects(r.data)).catch(() => {});
+    api.get("/developer/projects").then((r) => setProjects(r.data)).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
@@ -118,7 +118,7 @@ export default function DeveloperDashboard() {
     setProjectForm({
       name: p.name || "", location: p.location || "", address_detail: p.address_detail || "",
       developer_name: p.developer_name || "", description: p.description || "",
-      image: p.image || null, program: p.program || "KOMERSIAL",
+      image: p.image || null, program: p.program || "KOMERSIAL", bank: p.bank || "Bank BTN",
     });
     setShowProject(true);
   };
@@ -326,6 +326,17 @@ export default function DeveloperDashboard() {
               </div>
             </div>
             <div><Label className="text-xs">Deskripsi</Label><Textarea data-testid="pf-description" value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} /></div>
+            <div>
+              <Label className="text-xs">Bank Pembiayaan KPR</Label>
+              <Select value={projectForm.bank} onValueChange={(v) => setProjectForm({ ...projectForm, bank: v })}>
+                <SelectTrigger data-testid="pf-bank"><SelectValue placeholder="Pilih bank" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bank BTN">Bank BTN</SelectItem>
+                  <SelectItem value="Bank DKI">Bank DKI</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-slate-400 mt-1">Pengajuan KPR proyek ini hanya diteruskan ke analis bank terpilih.</p>
+            </div>
             <ImageInput label="Foto Proyek / Banner" value={projectForm.image} onChange={(v) => setProjectForm({ ...projectForm, image: v })} testid="pf-image" />
           </div>
           <DialogFooter>

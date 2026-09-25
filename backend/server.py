@@ -302,6 +302,22 @@ async def get_project(project_id: str):
 
 
 # ---------------- developer: project & unit management ----------------
+async def _assert_project_owner(project: dict, user: dict):
+    """admin_korpri melihat semua; developer hanya proyek miliknya sendiri."""
+    if user["role"] == "admin_korpri":
+        return
+    if project.get("developer_id") != user["id"]:
+        raise HTTPException(403, "Anda hanya dapat mengelola produk milik sendiri")
+
+
+async def _owned_project_ids(user: dict):
+    """None berarti akses penuh (admin_korpri). Selain itu daftar id proyek milik user."""
+    if user["role"] == "admin_korpri":
+        return None
+    return [str(p["_id"]) async for p in
+            db.projects.find({"developer_id": user["id"]}, {"_id": 1})]
+
+
 class ProjectCreateInput(BaseModel):
     name: str
     location: str
@@ -310,6 +326,7 @@ class ProjectCreateInput(BaseModel):
     description: str | None = None
     image: str | None = None
     program: str = "KOMERSIAL"
+    bank: str | None = None
 
 
 class UnitCreateInput(BaseModel):
@@ -327,6 +344,18 @@ class UnitCreateInput(BaseModel):
     gallery: list[str] | None = None
 
 
+@api.get("/developer/projects")
+async def developer_projects(user: dict = Depends(require_roles("admin_developer", "admin_korpri"))):
+    q = {} if user["role"] == "admin_korpri" else {"developer_id": user["id"]}
+    projects = [clean(p) async for p in db.projects.find(q).sort("created_at", 1)]
+    for p in projects:
+        units = [clean(u) async for u in db.units.find({"project_id": p["id"]})]
+        p["units"] = units
+        p["available_count"] = sum(1 for u in units if u["status"] == "available")
+        p["total_units"] = len(units)
+    return projects
+
+
 @api.post("/developer/projects")
 async def create_project(inp: ProjectCreateInput,
                          user: dict = Depends(require_roles("admin_developer", "admin_korpri"))):
@@ -336,8 +365,9 @@ async def create_project(inp: ProjectCreateInput,
         raise HTTPException(400, "Ukuran gambar terlalu besar (maks ~6 MB)")
     doc = inp.model_dump()
     doc["image"] = store_media_or_400(doc.get("image"), "projects")
+    doc["developer_id"] = user["id"]
     if not doc.get("developer_name"):
-        doc["developer_name"] = user.get("name")
+        doc["developer_name"] = user.get("company") or user.get("name")
     doc["created_at"] = datetime.now(timezone.utc).isoformat()
     res = await db.projects.insert_one(doc)
     return clean(await db.projects.find_one({"_id": res.inserted_id}))
@@ -351,6 +381,7 @@ class ProjectUpdateInput(BaseModel):
     description: str | None = None
     image: str | None = None
     program: str | None = None
+    bank: str | None = None
 
 
 @api.put("/developer/projects/{project_id}")
@@ -359,6 +390,7 @@ async def update_project(project_id: str, inp: ProjectUpdateInput,
     p = await db.projects.find_one({"_id": ObjectId(project_id)})
     if not p:
         raise HTTPException(404, "Proyek tidak ditemukan")
+    await _assert_project_owner(p, user)
     updates = {k: v for k, v in inp.model_dump().items() if v is not None}
     if "program" in updates and updates["program"] not in ("FLPP", "KOMERSIAL"):
         raise HTTPException(400, "Program harus FLPP atau KOMERSIAL")
@@ -381,6 +413,7 @@ async def create_unit(inp: UnitCreateInput,
     p = await db.projects.find_one({"_id": ObjectId(inp.project_id)})
     if not p:
         raise HTTPException(404, "Proyek tidak ditemukan")
+    await _assert_project_owner(p, user)
     for img in (inp.image_front, inp.image_layout, inp.image_siteplan):
         if img and len(img) > 8_000_000:
             raise HTTPException(400, "Ukuran gambar terlalu besar (maks ~6 MB per foto)")
@@ -421,6 +454,9 @@ async def update_unit(unit_id: str, inp: UnitUpdateInput,
     u = await db.units.find_one({"_id": ObjectId(unit_id)})
     if not u:
         raise HTTPException(404, "Unit tidak ditemukan")
+    proj = await db.projects.find_one({"_id": ObjectId(u["project_id"])})
+    if proj:
+        await _assert_project_owner(proj, user)
     updates = {k: v for k, v in inp.model_dump().items() if v is not None}
     if "block" in updates:
         updates["block"] = updates["block"].upper()
@@ -451,6 +487,9 @@ async def delete_unit(unit_id: str,
     u = await db.units.find_one({"_id": ObjectId(unit_id)})
     if not u:
         raise HTTPException(404, "Unit tidak ditemukan")
+    proj = await db.projects.find_one({"_id": ObjectId(u["project_id"])})
+    if proj:
+        await _assert_project_owner(proj, user)
     active = await db.bookings.find_one({"unit_id": unit_id})
     if u.get("status") != "available" or active:
         raise HTTPException(400, "Unit sudah dipesan/terjual dan tidak dapat dihapus")
@@ -702,8 +741,11 @@ class SprApproveInput(BaseModel):
 
 @api.get("/developer/spr-queue")
 async def spr_queue(user: dict = Depends(require_roles("admin_developer", "admin_korpri"))):
-    bookings = [b async for b in db.bookings.find(
-        {"spr_status": {"$in": ["draft", "approved", "issued"]}}).sort("created_at", -1)]
+    q = {"spr_status": {"$in": ["draft", "approved", "issued"]}}
+    owned = await _owned_project_ids(user)
+    if owned is not None:
+        q["project_id"] = {"$in": owned}
+    bookings = [b async for b in db.bookings.find(q).sort("created_at", -1)]
     return [await _enrich(b) for b in bookings]
 
 
@@ -719,6 +761,8 @@ async def approve_spr(booking_id: str, inp: SprApproveInput,
     unit = await db.units.find_one({"_id": ObjectId(b["unit_id"])})
     project = await db.projects.find_one({"_id": ObjectId(b["project_id"])})
     u = await db.users.find_one({"_id": ObjectId(b["user_id"])})
+    if project:
+        await _assert_project_owner(project, user)
 
     pdf_b64 = generate_spr_pdf(b, clean(unit), clean(project), clean(u), inp.signature)
     await db.bookings.update_one({"_id": b["_id"]}, {"$set": {
@@ -737,6 +781,7 @@ async def approve_spr(booking_id: str, inp: SprApproveInput,
             "project_id": b["project_id"],
             "loan_amount": b["kpr_sim"]["loan_amount"],
             "program": b["program"],
+            "bank": (project or {}).get("bank") or "Bank BTN",
             "status": "pending",   # pending | pre_approved | approved | rejected | need_revision
             "slik_note": None,
             "evaluator_note": None,
@@ -856,7 +901,10 @@ async def send_followup(booking_id: str, user: dict = Depends(require_roles("adm
 # ---------------- BTN: KPR applications ----------------
 @api.get("/kpr/applications")
 async def kpr_applications(user: dict = Depends(require_roles("btn_evaluator", "admin_korpri"))):
-    apps = [a async for a in db.kpr_applications.find().sort("created_at", -1)]
+    q = {}
+    if user["role"] == "btn_evaluator":
+        q["bank"] = user.get("bank")
+    apps = [a async for a in db.kpr_applications.find(q).sort("created_at", -1)]
     out = []
     for a in apps:
         a = clean(a)
@@ -878,6 +926,8 @@ async def update_kpr_status(app_id: str, inp: KprStatusInput,
     a = await db.kpr_applications.find_one({"_id": ObjectId(app_id)})
     if not a:
         raise HTTPException(404, "Pengajuan tidak ditemukan")
+    if user["role"] == "btn_evaluator" and a.get("bank") != user.get("bank"):
+        raise HTTPException(403, "Pengajuan ini ditujukan ke bank lain")
     await db.kpr_applications.update_one({"_id": a["_id"]}, {"$set": {
         "status": inp.status, "evaluator_note": inp.evaluator_note,
         "slik_note": inp.slik_note,
@@ -987,13 +1037,21 @@ async def cron_dp_reminders(request: Request):
 # ---------------- dashboard stats ----------------
 @api.get("/stats")
 async def stats(user: dict = Depends(require_roles("admin_korpri", "admin_developer", "btn_evaluator"))):
-    total_bookings = await db.bookings.count_documents({})
-    paid = await db.bookings.count_documents({"payment_status": "paid"})
-    spr_issued = await db.bookings.count_documents({"spr_status": "issued"})
-    units_available = await db.units.count_documents({"status": "available"})
-    units_sold = await db.units.count_documents({"status": "sold"})
-    kpr_pending = await db.kpr_applications.count_documents({"status": "pending"})
-    kpr_approved = await db.kpr_applications.count_documents({"status": "approved"})
+    booking_q, unit_q = {}, {}
+    if user["role"] == "admin_developer":
+        owned = await _owned_project_ids(user)
+        booking_q["project_id"] = {"$in": owned or []}
+        unit_q["project_id"] = {"$in": owned or []}
+    kpr_q = {}
+    if user["role"] == "btn_evaluator":
+        kpr_q["bank"] = user.get("bank")
+    total_bookings = await db.bookings.count_documents(booking_q)
+    paid = await db.bookings.count_documents({**booking_q, "payment_status": "paid"})
+    spr_issued = await db.bookings.count_documents({**booking_q, "spr_status": "issued"})
+    units_available = await db.units.count_documents({**unit_q, "status": "available"})
+    units_sold = await db.units.count_documents({**unit_q, "status": "sold"})
+    kpr_pending = await db.kpr_applications.count_documents({**kpr_q, "status": "pending"})
+    kpr_approved = await db.kpr_applications.count_documents({**kpr_q, "status": "approved"})
     docs_missing = await db.documents.count_documents({"status": {"$in": ["missing", "invalid"]}})
     return {
         "total_bookings": total_bookings, "paid_bookings": paid,
