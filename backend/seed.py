@@ -59,6 +59,8 @@ async def seed():
     users = [
         {"name": "Admin KORPRI", "email": owner_email, "role": "admin_korpri",
          "password": owner_pass, "phone": "081200000001"},
+        {"name": "Admin KORPRI (Pardz)", "email": "pardz2006@gmail.com", "role": "admin_korpri",
+         "password": "korpri123", "phone": "081200000005"},
         {"name": "Mitra Developer (Griya Sejahtera)", "email": "developer@rumahkorpri.com",
          "role": "admin_developer", "password": "developer123", "phone": "081200000002",
          "company": "PT Griya Sejahtera"},

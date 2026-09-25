@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Navbar } from "../components/Navbar";
@@ -6,8 +6,11 @@ import { api, rupiah, mediaUrl } from "../lib/api";
 import { StatusBadge } from "../components/shared";
 import { Button } from "../components/ui/button";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "../components/ui/select";
+import {
   ShieldCheck, FileText, Building2, Landmark, ArrowRight,
-  MapPin, CheckCircle2, Wallet, MessagesSquare,
+  MapPin, CheckCircle2, Wallet, MessagesSquare, SlidersHorizontal, X,
 } from "lucide-react";
 
 const HERO = "https://images.pexels.com/photos/3918373/pexels-photo-3918373.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=900&w=1400";
@@ -19,10 +22,52 @@ const STEPS = [
   { icon: MessagesSquare, t: "Follow-Up Dokumen", d: "CRM KORPRI mengingatkan kelengkapan berkas via WhatsApp & in-app." },
 ];
 
+const PRICE_BRACKETS = [
+  { k: "all", t: "Semua Harga", test: () => true },
+  { k: "lt250", t: "< Rp 250 jt", test: (v) => v < 250e6 },
+  { k: "250-500", t: "Rp 250–500 jt", test: (v) => v >= 250e6 && v < 500e6 },
+  { k: "500-1000", t: "Rp 500 jt – 1 M", test: (v) => v >= 500e6 && v < 1e9 },
+  { k: "gt1000", t: "> Rp 1 M", test: (v) => v >= 1e9 },
+];
+
+const typeBucket = (t) => {
+  const m = String(t || "").match(/(\d+)/);
+  return m ? m[1] : null;
+};
+
 export default function Landing() {
   const [projects, setProjects] = useState([]);
+  const [fCity, setFCity] = useState("all");
+  const [fProgram, setFProgram] = useState("all");
+  const [fType, setFType] = useState("all");
+  const [fPrice, setFPrice] = useState("all");
 
   useEffect(() => { api.get("/projects").then((r) => setProjects(r.data)).catch(() => {}); }, []);
+
+  const cities = useMemo(() => {
+    const set = new Set(projects.map((p) => (p.location || "").split(",")[0].trim()).filter(Boolean));
+    return [...set].sort();
+  }, [projects]);
+
+  const types = useMemo(() => {
+    const set = new Set();
+    projects.forEach((p) => (p.units || []).forEach((u) => { const b = typeBucket(u.type); if (b) set.add(b); }));
+    return [...set].sort((a, b) => Number(a) - Number(b));
+  }, [projects]);
+
+  const bracket = PRICE_BRACKETS.find((b) => b.k === fPrice) || PRICE_BRACKETS[0];
+
+  const filtered = useMemo(() => projects.filter((p) => {
+    if (fProgram !== "all" && p.program !== fProgram) return false;
+    if (fCity !== "all" && (p.location || "").split(",")[0].trim() !== fCity) return false;
+    const units = p.units || [];
+    if (fType !== "all" && !units.some((u) => typeBucket(u.type) === fType)) return false;
+    if (fPrice !== "all" && !units.some((u) => bracket.test(u.price))) return false;
+    return true;
+  }), [projects, fProgram, fCity, fType, fPrice, bracket]);
+
+  const hasFilter = fCity !== "all" || fProgram !== "all" || fType !== "all" || fPrice !== "all";
+  const resetFilters = () => { setFCity("all"); setFProgram("all"); setFType("all"); setFPrice("all"); };
 
   return (
     <div className="App">
@@ -80,14 +125,81 @@ export default function Landing() {
       {/* PROJECTS */}
       <section id="proyek" className="bg-[hsl(var(--muted))]/50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-end justify-between mb-8">
             <div>
               <p className="text-[hsl(var(--accent))] font-semibold text-sm uppercase tracking-wide">Proyek Tersedia</p>
               <h2 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800 mt-2">Pilih Perumahan Anda</h2>
             </div>
           </div>
+
+          {/* FILTER KATALOG */}
+          <div data-testid="catalog-filter" className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 sm:p-5 mb-8">
+            <div className="flex items-center gap-2 text-slate-700 mb-3">
+              <SlidersHorizontal className="h-4 w-4 text-[hsl(var(--primary))]" />
+              <span className="font-heading font-semibold text-sm">Cari Rumah Impian Anda</span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-slate-500">Kota</label>
+                <Select value={fCity} onValueChange={setFCity}>
+                  <SelectTrigger data-testid="filter-city" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Kota</SelectItem>
+                    {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Tipe Rumah</label>
+                <Select value={fType} onValueChange={setFType}>
+                  <SelectTrigger data-testid="filter-type" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Tipe</SelectItem>
+                    {types.map((t) => <SelectItem key={t} value={t}>Tipe {t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Program</label>
+                <Select value={fProgram} onValueChange={setFProgram}>
+                  <SelectTrigger data-testid="filter-program" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Program</SelectItem>
+                    <SelectItem value="FLPP">FLPP (Subsidi)</SelectItem>
+                    <SelectItem value="KOMERSIAL">Komersial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Rentang Harga</label>
+                <Select value={fPrice} onValueChange={setFPrice}>
+                  <SelectTrigger data-testid="filter-price" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PRICE_BRACKETS.map((b) => <SelectItem key={b.k} value={b.k}>{b.t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-3">
+              <p data-testid="filter-result-count" className="text-sm text-slate-500">
+                Menampilkan <b className="text-slate-700">{filtered.length}</b> dari {projects.length} proyek
+              </p>
+              {hasFilter && (
+                <button onClick={resetFilters} data-testid="filter-reset"
+                  className="text-sm text-slate-500 hover:text-[hsl(var(--primary))] flex items-center gap-1">
+                  <X className="h-3.5 w-3.5" /> Reset filter
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filtered.length === 0 && (
+            <div data-testid="filter-empty" className="text-center py-16 text-slate-400">
+              Tidak ada proyek yang cocok dengan filter Anda. Coba ubah kriteria pencarian.
+            </div>
+          )}
           <div className="grid md:grid-cols-2 gap-6">
-            {projects.map((p) => (
+            {filtered.map((p) => (
               <Link key={p.id} to={`/proyek/${p.id}`} data-testid={`project-card-${p.id}`}
                 className="group bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-sm card-hover flex flex-col">
                 <div className="relative h-52 overflow-hidden">
