@@ -57,7 +57,8 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 - Verifikasi: 15/15 pytest isolasi PASS (iteration_9.json), frontend isolasi + render denah OK. Catatan: 403 lintas-bank belum diuji e2e karena 0 pengajuan KPR pasca re-seed (butuh alur booking→bayar→SPR); logika sudah benar per inspeksi kode.
 
 ## Demo Accounts
-- Admin KORPRI: pardz2006@gmail.com / korpri123
+- Admin KORPRI: admin@rumahkorpri.com / korpri123
+- Admin KORPRI (Pardz): pardz2006@gmail.com / korpri123
 - Developer: developer@rumahkorpri.com / developer123
 - Bank BTN: btn@rumahkorpri.com / btn123
 - Consumer: consumer@rumahkorpri.com / consumer123
