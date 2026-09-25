@@ -49,6 +49,13 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 - Opsional belum diisi (fallback aman): `TWILIO_ACCOUNT_SID/AUTH_TOKEN/WHATSAPP_FROM` (WhatsApp → mode simulasi), `OWNER_EMAIL/OWNER_PASSWORD` (default admin@rumahkorpri.com/korpri123), `INTEGRATION_PROXY_URL` (default integrations.emergentagent.com).
 - Smoke test 100% (test_reports/iteration_8.json): health OK, seed jalan (2 proyek + 7 user), login admin & consumer via UI OK, simulasi KPR publik OK, object storage terinisialisasi.
 
+## Iterasi 8 — Isolasi Data & Katalog Diperluas (2026-09-25)
+- **Isolasi Developer**: setiap `admin_developer` hanya melihat/mengelola proyek & unit miliknya. Proyek kini punya `developer_id` (pemilik). Endpoint baru `GET /api/developer/projects` (scoped); `create_project` set `developer_id`; `update_project`/`create_unit`/`update_unit`/`delete_unit`/`approve_spr` cek `_assert_project_owner` (403 bila lintas developer); `/api/developer/spr-queue` & `/api/stats` di-scope per developer. Landing/`/api/projects` publik tetap menampilkan semua proyek ke peminat.
+- **Isolasi Bank**: proyek punya field `bank` (Bank BTN / Bank DKI). KPR application menyimpan `bank` dari proyek saat SPR disetujui. `GET /api/kpr/applications` difilter per `user.bank` untuk `btn_evaluator`; `update_kpr_status` 403 bila lintas bank; stats bank di-scope. Admin KORPRI tetap melihat semua.
+- **Katalog diperluas**: seed versioned (SEED_VERSION=3, re-seed sekali & wipe demo lama). 6 proyek milik 3 developer berbeda, total 28 unit (tipe 36–70), campuran FLPP/Bank BTN & KOMERSIAL/Bank DKI.
+- **Gambar denah**: tiap unit punya `image_front` (foto rumah) + `image_layout` (denah 2D per luas bangunan 36/45/60/70 m², menampilkan ruang tamu, kamar tidur, dapur, kamar mandi, carport) — tampil di dialog detail unit ("Layout Rumah"). Form proyek developer kini punya pilihan Bank Pembiayaan (pf-bank).
+- Verifikasi: 15/15 pytest isolasi PASS (iteration_9.json), frontend isolasi + render denah OK. Catatan: 403 lintas-bank belum diuji e2e karena 0 pengajuan KPR pasca re-seed (butuh alur booking→bayar→SPR); logika sudah benar per inspeksi kode.
+
 ## Demo Accounts
 - Admin KORPRI: pardz2006@gmail.com / korpri123
 - Developer: developer@rumahkorpri.com / developer123
