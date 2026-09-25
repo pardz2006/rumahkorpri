@@ -42,6 +42,13 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 
 - (Iterasi 7) User demo tambahan: 2 analis bank (Bank BTN, Bank DKI — role btn_evaluator, field `bank`) & 3 developer berbeda (developer/developer2/developer3, field `company`). Bagikan Simulasi: tautan publik per simulasi (POST /api/simulations/{id}/share → token; GET /api/public/simulations/{token} tanpa auth; halaman publik /s/{token} + tombol bagikan WhatsApp & unduh PDF di Riwayat). Pengingat DP jatuh tempo: endpoint cron POST /api/cron/dp-reminders (dipanggil scheduler harian via .emergent/crons.yml) mengirim WhatsApp untuk termin DP yang jatuh tempo ≤3 hari & belum diingatkan (idempoten, tandai reminded). Dashboard bank kini menampilkan nama bank user. Semua test 100% (15/15 backend, frontend OK).
 
+## Environment Import (2026-09-25 — rumah-deps workspace)
+- Repo ZIP di-import ke /app; deps diinstall: `yarn install` (frontend, Yarn 1.22.22, resolutions respected) + `pip install -r requirements.txt` (venv /root/.venv, Python 3.11.16, Node 20.20.2). `pip check` bersih.
+- Fix saat install: hash fragment `#sha256=` pada URL wheel litellm di requirements.txt dihapus (konflik ResolutionImpossible dengan emergentintegrations).
+- Env wired: `JWT_SECRET` + `EMERGENT_LLM_KEY` ditambahkan ke backend/.env (JWT_SECRET wajib — auth.py KeyError tanpa itu); `MONGO_URL`/`DB_NAME`/`CORS_ORIGINS`/`REACT_APP_BACKEND_URL` sudah ada.
+- Opsional belum diisi (fallback aman): `TWILIO_ACCOUNT_SID/AUTH_TOKEN/WHATSAPP_FROM` (WhatsApp → mode simulasi), `OWNER_EMAIL/OWNER_PASSWORD` (default admin@rumahkorpri.com/korpri123), `INTEGRATION_PROXY_URL` (default integrations.emergentagent.com).
+- Smoke test 100% (test_reports/iteration_8.json): health OK, seed jalan (2 proyek + 7 user), login admin & consumer via UI OK, simulasi KPR publik OK, object storage terinisialisasi.
+
 ## Demo Accounts
 - Admin KORPRI: pardz2006@gmail.com / korpri123
 - Developer: developer@rumahkorpri.com / developer123
