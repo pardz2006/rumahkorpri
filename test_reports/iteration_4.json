@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 4: Tested 3 new features - (1) Photo magic-bytes validation, (2) DP installments (termin) UI + backend order enforcement, (3) Edit Project. Backend: 6/6 new pytest tests in test_iteration4_features.py PASS - fake image (text with data:image/png prefix) rejected 400 on both project and unit create; real PNG accepted and stored to /api/files/; PUT /api/developer/projects/{id} updates name+location and cascades project_name to units; invalid program on edit returns 400; DP termins array has 3 items summing to dp_amount; POST /api/bookings/{id}/pay-dp?termin_no=2 before termin 1 returns 400; sequential pay of termins 1->2->3 transitions dp_payment_status pending->partial->partial->paid with dp_paid_amount=dp_amount and remaining=0; webhook kind='dp_termin' properly persists ref/paid_at. Frontend UI Playwright: Consumer /portal shows 'Jadwal Cicilan Uang Muka (DP)' with 3 dp-termin-{bid}-{n} cards, 'Terbayar'/'Sisa' summary; only termin 1 button enabled initially, termin 2/3 disabled; dialog for termin 1 titled 'Pembayaran DP Termin 1', confirm-payment-btn marks Lunas and enables termin 2; full pay of all 3 shows Lunas x8 on card (unit DP Lunas + 3 termins Lunas + refs). Edit Project: developer /developer 'Kelola Unit' shows Edit Proyek link (edit-project-{id}) per project; clicking opens dialog titled 'Edit Proyek' with prefilled pf-name/pf-location; changing values + submit-project-btn calls PUT and header updates in place (name+location refresh, 'Proyek berhasil diperbarui' toast). Fixed a critical parser bug during testing: extra </div> in ConsumerPortal.js (line 159) prevented compilation.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4_features.py",
+    "/app/test_reports/pytest/iteration4.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ConsumerPortal.js had an extra </div> at line 159 that broke the entire frontend compile (Parsing error: Unexpected token, expected ','). Fixed by testing agent. Main agent should double-check JSX indentation/structure on future edits — the DP termin section was appended without matching the wrapping div correctly.",
+    "make_dp_termins uses round(dp_amount/n) for the first n-1 termins and gives the remainder to the last termin. For dp_amount=25,000,000 this yields 8,333,333/8,333,333/8,333,334 which is fine, but for very small dp_amount the base could round to 0 producing termin 3 with the whole amount. Consider math.floor + remainder-in-last for consistent rounding.",
+    "initiate_dp checks ownership but does NOT re-check dp_payment_status — if dp is already 'paid' the client can still open a payment for a paid termin (though termin['status']=='paid' guard catches individual termins). Consider explicit early return when b.get('dp_payment_status')=='paid'.",
+    "update_project accepts image without size limit check (create_project checks len(inp.image) > 8_000_000). Add same size guard to update.",
+    "payment_webhook 'dp_termin' path does not validate that termin_no > 1 requires termin_no-1 to be paid — order enforcement lives only in initiate_dp. If a malicious client hits webhook directly with termin_no=3, it will mark it paid out of order. The webhook is public. Consider adding order enforcement server-side in the webhook as well."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4_features.py",
+    "/app/frontend/src/pages/ConsumerPortal.js"
+  ],
+  "success_rate": {"backend": "100% (6/6 iteration4 tests + prior 7/7 still pass)", "frontend": "100% (DP termin flow + Edit Project verified end-to-end)"},
+  "test_credentials": "developer@rumahkorpri.com/developer123, consumer@rumahkorpri.com/consumer123",
+  "seed_data_creation": "Created TEST_I4_* projects and one DP-termin booking (id 6ab61e288b8d4fc0ff412e63) that is now fully Lunas on all 3 termins under 'UI_DPTermin' unit in project 'UITEST_DPTermin_4e1dd'. Edit Project test edited then reverted 'Griya KORPRI Harmoni'.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New testids: edit-project-{pid}, submit-project-btn (used for both create and edit; DialogTitle 'Edit Proyek' vs 'Tambah Proyek Perumahan'), dp-termin-{bid}-{n}, pay-dp-termin-{bid}-{n}, confirm-payment-btn. For DP termin: openPay(b,'dp_termin',n) uses params termin_no. Webhook still uses kind='dp_termin' (not 'dp'). backend pytest.ini enables xdist which breaks pytest.<attr> sharing across create->use tests — run with -o addopts='' when tests share state. NOTE ConsumerPortal.js had a stray </div> that broke compile — fixed by adding matching structure; do not re-add.",
+  "rca of the issue": "Compile error: prior edit adding the DP termin schedule block introduced an extra </div> at line 159 (before Documents checklist comment), closing the booking card wrapper too early. React/Babel parser failed at line 161 because the outer JSX fragment expected a closing tag or comma. Fix: remove that stray </div>. Reproduction: git-log of ConsumerPortal.js around the DP termin addition; open /portal in browser -> 'Compiled with problems: SyntaxError Unexpected token, expected \",\" (161:14)'. Mitigation: after JSX inserts always run yarn build/lint locally, or ESLint with react parser."
+}

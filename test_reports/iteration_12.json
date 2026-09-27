@@ -1,0 +1,21 @@
+{
+  "summary": "Iteration 12 verified: 5 new consumer logins work with correct city/province; bankdki2/3 return 401 (deleted); btn@ and bankdki@ still work with strict BTN/DKI KPR isolation; one-click demo quick-login panel works on desktop (dark left panel) and mobile (light panel above form) for all tested roles (consumer, BTN, DKI, developer4, admin). Cross-relogin after logout works. Regression intact: 12 projects / 49 units, KPR apps persisted (BTN pre_approved, DKI pending), developer isolation 403.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration12_demo_seed.py",
+    "/app/test_reports/pytest/iteration12.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Login.js: demo panel rendered twice in DOM (desktop + mobile) causing duplicate data-testid values. Not a bug per se but could confuse strict selectors; consider conditional rendering or unique testids per variant (e.g. demo-desktop-<email> / demo-mobile-<email>).",
+    "Login.js quickLogin uses stale `form` in setForm({...form, email, password}) but doesn't await state update before login — works because credentials are passed directly from `d`; still, the setForm call is essentially cosmetic and can be removed."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration12_demo_seed.py"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (7/7 flows)"},
+  "test_credentials": "As per /app/memory/test_credentials.md; verified consumer2..6/consumer123, btn@/btn123, bankdki@/dki123, developer4@/developer123, pardz2006@gmail.com/korpri123. bankdki2/3 confirmed removed (401).",
+  "seed_data_creation": "None - used seeded demo accounts.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test_iteration12_demo_seed.py covers new consumer city/province, bank cleanup 401 assertions, BTN/DKI isolation, and regression (12 projects, 49 units, KPR persistence, dev isolation). Note: /api/projects/{id} returns embedded units (there is no /api/projects/{id}/units endpoint). Developer project edit uses PUT /api/developer/projects/{id} (not PATCH /api/projects/{id})."
+}

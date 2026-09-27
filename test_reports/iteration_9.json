@@ -1,0 +1,23 @@
+{
+  "summary": "Iteration 9 isolation + expanded catalog verified. Built /app/backend/tests/test_iteration9_isolation.py (15 pytest tests) — ALL PASSED. Backend: (a) GET /api/projects returns 6 projects and 28 units, every unit has image_front + image_layout; (b) /api/developer/projects is correctly scoped — dev1 sees only {Griya KORPRI Harmoni, Bumi ASN Residence}, dev2 only {Persada Abdi Negara, Persada Grande Living}, dev3 only {Karya Nyaman Village, Nyaman Hills Premier}, admin sees all 6; (c) cross-developer PUT /api/developer/projects/{id_of_other_dev}, POST /api/developer/units on other's project, and PUT/DELETE /api/developer/units/{other_dev_unit} all return 403; (d) /api/developer/spr-queue is empty for every dev (expected — fresh SEED_VERSION=3 wiped bookings) and no project leakage; (e) /api/kpr/applications empty for BTN and DKI (correct empty-scoped) and admin can list; (f) /api/stats works for every role. Frontend: DeveloperDashboard for dev1/dev2/dev3 renders only that developer's 2 projects (verified via body text). Consumer login → home shows 6 project cards → open project detail → click unit-row opens dialog rendering house photo AND 'Layout Rumah' image (data-testid unit-detail-layout present with valid src) and 'Pesan Unit' booking button reachable. No console/CORS errors observed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration9_isolation.py",
+    "/app/test_reports/pytest/iteration9.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Cross-bank PATCH /api/kpr/applications/{id} 403 path was NOT dynamically exercised because no KPR applications exist post-reseed (SEED_VERSION=3 wiped bookings). Code inspection of server.py (update_kpr_status) shows correct check `if user.role=='bank_evaluator' and app.bank != user.bank: raise 403`, but recommend driving one booking→pay(webhook)→SPR-approve flow in next iteration to get end-to-end coverage.",
+    "server.py is a 1100-line monolith; consider splitting into routers per resource for maintainability (carry-over from iteration_8).",
+    "Login response uses key 'token' rather than the more conventional 'access_token' — fine, but worth documenting so future test authors don't guess wrong (I hit this initially)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration9_isolation.py"],
+  "success_rate": {"backend": "100% (15/15 tests)", "frontend": "100% (isolation + unit-detail-layout rendering verified)"},
+  "test_credentials": "All 7 seeded accounts verified working: admin@rumahkorpri.com/korpri123, developer{,2,3}@rumahkorpri.com/developer123, btn@rumahkorpri.com/btn123, bankdki@rumahkorpri.com/dki123, consumer@rumahkorpri.com/consumer123.",
+  "seed_data_creation": "None — used existing SEED_VERSION=3 catalog (6 projects, 28 units, denah images).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login endpoint POST /api/auth/login returns {token, user} (NOT access_token). Public /api/projects already includes inline units array — no /api/projects/{id}/units endpoint. UnitCreateInput requires {project_id,type,block,number,price} (no code/status). Bank-evaluator cross-bank 403 was not e2e-driven because there are 0 KPR apps post-reseed; drive booking→webhook→SPR flow if that coverage is required. Frontend testids to use: project-card-{id}, unit-row-{id}, unit-detail-open-{id}, unit-detail-layout, book-unit-{id}.",
+  "rca of the issue": "N/A — no defects found."
+}

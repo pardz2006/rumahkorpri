@@ -1,0 +1,22 @@
+{
+  "summary": "Iteration 13: verified interactive Leaflet map + city-scoped new-project notification. All backend (3/3) and frontend map/notif flows pass. Cleanup done — catalog stays at 12 projects.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration13_map_notif.py",
+    "/app/test_reports/pytest/iteration_13.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "No DELETE endpoint exists for /api/developer/projects/{id} — tester had to clean up via MongoDB directly. Consider adding one for admin/developer to remove obsolete projects.",
+    "Two duplicated CITY_COORDS tables (backend/geo.py + frontend/ProjectsMap.js). Consider exposing a single /api/geo/cities endpoint or embedding coords once on the project record (already the case for projects — good)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration13_map_notif.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "consumer5@rumahkorpri.com/consumer123 (Semarang), consumer@rumahkorpri.com/consumer123 (Bekasi), developer5@rumahkorpri.com/developer123",
+  "seed_data_creation": "Created temporary project 'TEST_MapNotifSemarang' during notification test; deleted via MongoDB after assertions. Catalog verified back at 12 projects / 49 units.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend: /api/projects returns lat/lng for all 12 projects. New-project notif verified positive (Semarang consumer got 'Proyek baru di kota Anda 🏠') and negative (Bekasi consumer did NOT). Frontend: 12 leaflet-marker-icons anonymously; when consumer5 logs in, header shows 'perumahan terdekat dari Semarang', blue circleMarker (#2563eb) at Semarang, one orange pin (#C2410C) on nearest (Harmoni Land Semarang), popup 'Lihat Unit' navigates to /proyek/{id}. Nav bell shows unread count 2 with 'Proyek baru' notification. NOTE: leaflet markers overlap so Playwright direct .click() may be intercepted by neighbor SVG circle — use bounding_box + mouse.click at top of pin, or dispatch synthetic MouseEvent. NOTE: no DELETE /developer/projects/{id} endpoint — clean up via db.projects.delete_many if you create test projects.",
+  "rca of the issue": "N/A — all tests passing."
+}

@@ -1,0 +1,8 @@
+crons:
+  - name: dp-due-reminders
+    description: "Kirim pengingat WhatsApp untuk termin DP yang mendekati jatuh tempo (harian 08:00 WIB)"
+    cron: "0 1 * * *"
+    endpoint: "{{BASE_URL}}/api/cron/dp-reminders"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    enabled: true

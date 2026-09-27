@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 11 — Verified new seed users, developer isolation, bank scoping, additive catalog growth (12 projects / 49 units), and data preservation from iteration_10. Created /app/backend/tests/test_iteration11_new_seed.py — 15/15 pytest PASSED. Backend: all 5 new logins (bankdki2, bankdki3 as btn_evaluator/Bank DKI; developer4/5/6 as admin_developer) succeed with correct role+bank. GET /api/developer/projects returns exactly {Cendana Asri Residence, Cendana Riverpark} for dev4, {Harmoni Land Semarang, Harmoni Waterfront City} for dev5, {Purnama Green Valley, Purnama Sky Residence} for dev6; original dev1/2/3 still 2 projects each. Cross-developer PUT /api/developer/projects/{id} => 403; cross-developer POST /api/developer/units => 403. bankdki2/bankdki3/bankdki all see only Bank DKI applications; btn@ sees only Bank BTN; cross-bank PATCH /api/kpr/applications/{id} (bankdki2 patching BTN app) => 403. Public GET /api/projects returns 12 projects with 49 total units. Iteration_10 KPR applications persist (BTN pre_approved + DKI pending both present). Frontend: landing page renders 12 project cards; city filter=Semarang correctly narrows to the 2 Harmoni Land projects. developer4 UI login redirects to /developer with only Cendana Asri Residence + Cendana Riverpark visible (no Harmoni/Purnama/Griya leakage). bankdki2 UI login redirects to /btn showing header 'Dashboard Analis Bank DKI', Total Pengajuan=1 (the Budi Santoso KOMERSIAL Bank DKI app seeded in iteration_10). All isolation, additive-seed, and data-preservation requirements confirmed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration11_new_seed.py",
+    "/app/test_reports/pytest/iteration11.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py remains ~1105 lines — carry-over recommendation from iteration_10 to split by resource routers.",
+    "Note: string 'Bank BTN' appears in the bank-evaluator dashboard body because the header/menu label 'Analis Bank BTN' is a static role option; body-level string search for 'Bank BTN' therefore matches even for DKI users. Not a bug — the dashboard title and data are correctly scoped — but a naive UI regression check by substring could be misleading. Consider gating the 'Analis Bank BTN' menu label by current user's bank."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration11_new_seed.py",
+    "/app/test_reports/iteration_11.json"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (landing+filter, dev4 dashboard, bankdki2 dashboard)"},
+  "test_credentials": "Verified: bankdki2@/bankdki3@rumahkorpri.com/dki123, developer4/5/6@rumahkorpri.com/developer123, plus existing btn@, bankdki@, developer@/2/3, admin@, consumer@.",
+  "seed_data_creation": "None created this iteration. Confirmed iteration_10's 2 KPR applications (BTN pre_approved, DKI pending) still persist — seed was additive.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "For POST /api/developer/units the UnitCreateInput.type field is a STRING (e.g. '36' not 36) — validation errors return 422. Cross-developer mutation checks: PUT /api/developer/projects/{id} returns 403; POST /api/developer/units with cross-owned project_id returns 403 AFTER passing pydantic (send valid body). Landing page uses data-testid=project-card-<id> pattern and data-testid=filter-city Radix Select. Bank evaluator dashboard route is /btn regardless of bank; dashboard title varies via user.bank."
+}

@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 10: verified (1) NEW admin_korpri login pardz2006@gmail.com/korpri123, (2) landing page catalog filter behavior, (3) full booking->pay->SPR->KPR bank isolation flow with REAL data. Backend: created /app/backend/tests/test_iteration10_full_flow.py — 7/7 pytest tests PASSED. Drove consumer@ to create 2 bookings (Griya KORPRI Harmoni [Bank BTN, FLPP] + Bumi ASN Residence [Bank DKI, KOMERSIAL]), initiated payment via POST /api/bookings/{id}/pay, simulated webhook POST /api/payments/webhook with kind=booking_fee -> payment_status=paid + spr_status=draft, then developer@ (owner of both projects) POST /api/bookings/{id}/spr/approve issuing SPR and auto-creating KPR applications with project.bank field. Result: btn@ GET /api/kpr/applications returns ONLY the Bank BTN application; bankdki@ returns ONLY the Bank DKI one. Cross-bank PATCH (btn@ patching the DKI app) => 403 as expected; same-bank PATCH => 200 and status persisted to pre_approved. Developer scoping regression holds (dev1 still sees exactly {Griya KORPRI Harmoni, Bumi ASN Residence}). Frontend: catalog-filter loads with 6 project cards + live count 'Menampilkan 6 dari 6 proyek'; Program=Komersial -> 3 cards; City=Bekasi -> 2 cards; Type=36 -> 3 cards; Price>1M -> 2 cards; filter-reset restores 6; FLPP + >1M yields 0 cards AND data-testid=filter-empty is shown; Bekasi+Komersial combo -> 1 card. Admin login pardz2006 through UI succeeds, toast 'Berhasil masuk' displayed, redirected to /crm showing 'Dashboard CRM Rumah KORPRI' with Total Pemesanan=2, Pembayaran Lunas=2, SPR Terbit=2 (matching the 2 real bookings I just drove through). NOTE: Radix Select option label for FLPP is 'FLPP (Subsidi)' not plain 'FLPP' — test scripts must use the full label.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10_full_flow.py",
+    "/app/test_reports/pytest/iteration10.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py still ~1105 lines — carry-over recommendation to split by resource routers.",
+    "Note for future authors: Radix Select option label for FLPP program is 'FLPP (Subsidi)'; test scripts should match by exact label including the parenthetical suffix.",
+    "approve_spr assigns kpr application bank from project.bank with fallback to 'Bank BTN' — safe because seed guarantees bank; but if a project were ever seeded without a bank field, KOMERSIAL bookings could silently be routed to BTN. Consider raising 500 or defaulting based on program."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration10_full_flow.py",
+    "/app/test_reports/iteration_10.json"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (filter + admin login + integration)"},
+  "test_credentials": "All working: pardz2006@gmail.com/korpri123 (NEW admin_korpri), admin@rumahkorpri.com/korpri123, developer@rumahkorpri.com/developer123, consumer@rumahkorpri.com/consumer123, btn@rumahkorpri.com/btn123, bankdki@rumahkorpri.com/dki123.",
+  "seed_data_creation": "Runtime-created via API during test: 2 bookings (BTN + DKI) fully progressed to spr_issued with matching KPR applications in each bank. These persist and populated Total Pemesanan=2/SPR Terbit=2 on the admin CRM dashboard.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "POST /api/bookings requires only {unit_id, program, dp_percent, tenor_years, payment_method}. Booking-fee webhook payload: POST /api/payments/webhook {booking_id, status:'paid', kind:'booking_fee'} (no auth). SPR approve requires developer to be project owner. KPR applications auto-created on SPR approve with bank=project.bank. Login returns {token, user} with token key 'token'. Radix Select FLPP option label = 'FLPP (Subsidi)'. Two KPR applications now exist post-this-iteration (one per bank) so bank scoping tests remain reproducible.",
+  "rca of the issue": "N/A — no defects."
+}
