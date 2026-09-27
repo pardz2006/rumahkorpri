@@ -6,6 +6,8 @@ import { KprSimulator } from "../components/KprSimulator";
 import { StatusBadge } from "../components/shared";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { UnitGallery } from "../components/UnitGallery";
+import { BlockPlan } from "../components/BlockPlan";
+import { VideoGallery } from "../components/VideoGallery";
 import { api, rupiah, formatApiErrorDetail, mediaUrl } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
@@ -66,7 +68,11 @@ export default function ProjectDetail() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <h2 className="font-heading text-2xl font-bold text-slate-800">Daftar Unit</h2>
+          <h2 className="font-heading text-2xl font-bold text-slate-800">Denah Blok / Kavling</h2>
+          <p className="text-slate-500 mt-1 mb-4">Klik kavling <b>Tersedia</b> untuk melihat detail & memesan unit.</p>
+          <BlockPlan units={project.units} onSelect={(u) => setUnitDetail(u)} />
+
+          <h2 className="font-heading text-2xl font-bold text-slate-800 mt-10">Daftar Unit</h2>
           <p className="text-slate-500 mt-1">{project.description}</p>
           <div className="mt-6 space-y-3">
             {project.units.map((u) => (
@@ -120,6 +126,7 @@ export default function ProjectDetail() {
               images={[unitDetail?.image_front, ...(unitDetail?.gallery || [])]}
               fallback={project.image}
               alt={unitDetail?.type} label={`${unitDetail?.type || "Rumah"} — Foto`} />
+            <VideoGallery videos={unitDetail?.videos} />
             {(unitDetail?.image_layout || unitDetail?.image_siteplan) && (
               <div className="grid grid-cols-2 gap-3">
                 {unitDetail?.image_layout && (

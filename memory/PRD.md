@@ -110,3 +110,9 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 - **Duplikat Massal**: endpoint `POST /api/developer/units/bulk` (UnitBulkCreateInput: start_number, count 1–50, number_prefix, number_pad) membuat banyak unit berurutan dalam 1 request dengan media di-upload sekali & dibagikan. Cek bentrok nomor. Form developer punya toggle "Duplikat Massal" + input Mulai No./Jumlah + preview rentang (mis. No. 01–05).
 - **Rute ke Lokasi**: di detail unit, di samping koordinat GPS ada tombol "Rute ke lokasi" → `google.com/maps/dir/?api=1&destination=<gps>&travelmode=driving` (navigasi dari posisi peminat).
 - Verifikasi: bulk API buat 5 unit (No.01–05) OK; galeri carousel, tombol rute, & toggle massal terverifikasi via screenshot.
+
+## Iterasi 16 — Impor CSV/Excel + Denah Blok Interaktif + Galeri Video (2026-09-27)
+- **Impor Unit Massal**: endpoint `POST /api/developer/units/import` (base64 CSV/XLSX, parse via pandas + openpyxl). Kolom wajib type/block/number/price; opsional land_area/building_area/address_detail/gps_coordinates. Cek duplikat blok/no (existing + dalam file), kembalikan created/errors/total_rows. UI: tombol "Impor CSV/Excel" + dialog pilih proyek, unduh template CSV, upload, tampilkan ringkasan & daftar baris dilewati. (requirements.txt +openpyxl==3.1.5)
+- **Denah Blok Interaktif**: komponen `BlockPlan` di ProjectDetail — grid kavling dikelompokkan per blok, warna per status (hijau tersedia/kuning dipesan/abu terjual), klik kavling tersedia membuka detail unit. Legenda status di atas grid.
+- **Galeri Video**: field `videos: list[str]` pada unit (tautan YouTube/MP4, tanpa upload). Form developer punya `VideoInput` (tambah/hapus tautan). Detail unit menampilkan `VideoGallery` (embed YouTube iframe / <video> untuk MP4) di bawah galeri foto.
+- Verifikasi: import CSV 3 baris → 3 unit dibuat OK; denah blok, embed video YouTube, dialog impor terverifikasi via screenshot.

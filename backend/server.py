@@ -346,6 +346,7 @@ class UnitCreateInput(BaseModel):
     image_siteplan: str | None = None
     image_location_map: str | None = None
     gps_coordinates: str | None = None
+    videos: list[str] | None = None
     gallery: list[str] | None = None
 
 
@@ -499,10 +500,101 @@ async def create_units_bulk(inp: UnitBulkCreateInput,
             "type": inp.type, "block": block, "number": n, "price": inp.price,
             "land_area": inp.land_area, "building_area": inp.building_area,
             "address_detail": inp.address_detail, "gps_coordinates": inp.gps_coordinates,
+            "videos": inp.videos or [],
             **shared, "status": "available", "created_at": now,
         })
     result = await db.units.insert_many(docs)
     return {"ok": True, "created": len(result.inserted_ids), "numbers": numbers}
+
+
+class UnitImportInput(BaseModel):
+    project_id: str
+    file_name: str
+    file_data: str  # base64 data URL or raw base64 of CSV/XLSX
+
+
+UNIT_IMPORT_COLUMNS = ["type", "block", "number", "price",
+                       "land_area", "building_area", "address_detail", "gps_coordinates"]
+
+
+@api.post("/developer/units/import")
+async def import_units(inp: UnitImportInput,
+                       user: dict = Depends(require_roles("admin_developer", "admin_korpri"))):
+    import io
+    import pandas as pd
+
+    p = await db.projects.find_one({"_id": ObjectId(inp.project_id)})
+    if not p:
+        raise HTTPException(404, "Proyek tidak ditemukan")
+    await _assert_project_owner(p, user)
+
+    raw = inp.file_data.partition(",")[2] if inp.file_data.startswith("data:") else inp.file_data
+    try:
+        data = base64.b64decode(raw)
+    except Exception:
+        raise HTTPException(400, "File tidak dapat dibaca")
+
+    name = (inp.file_name or "").lower()
+    try:
+        if name.endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(data))
+        elif name.endswith(".xlsx") or name.endswith(".xls"):
+            df = pd.read_excel(io.BytesIO(data))
+        else:
+            try:
+                df = pd.read_csv(io.BytesIO(data))
+            except Exception:
+                df = pd.read_excel(io.BytesIO(data))
+    except Exception as e:
+        raise HTTPException(400, f"Gagal membaca file: {e}")
+
+    df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+    if "type" not in df.columns or "block" not in df.columns or "number" not in df.columns or "price" not in df.columns:
+        raise HTTPException(400, "Kolom wajib tidak ada: type, block, number, price")
+
+    existing = {(u["block"], str(u["number"])) async for u in
+                db.units.find({"project_id": inp.project_id}, {"block": 1, "number": 1})}
+    now = datetime.now(timezone.utc).isoformat()
+    docs, errors, seen = [], [], set()
+
+    def num(v):
+        try:
+            return float(v) if pd.notna(v) and str(v).strip() != "" else None
+        except Exception:
+            return None
+
+    for i, row in df.iterrows():
+        line = i + 2  # header is row 1
+        block = str(row.get("block", "")).strip().upper()
+        number = str(row.get("number", "")).strip()
+        if number.endswith(".0"):
+            number = number[:-2]
+        type_ = str(row.get("type", "")).strip()
+        price = num(row.get("price"))
+        if not block or not number or not type_ or price is None:
+            errors.append(f"Baris {line}: type/block/number/price wajib diisi"); continue
+        key = (block, number)
+        if key in existing or key in seen:
+            errors.append(f"Baris {line}: Blok {block}/{number} duplikat"); continue
+        seen.add(key)
+        docs.append({
+            "project_id": inp.project_id, "project_name": p["name"],
+            "type": type_, "block": block, "number": number, "price": price,
+            "land_area": num(row.get("land_area")), "building_area": num(row.get("building_area")),
+            "address_detail": (str(row.get("address_detail")).strip()
+                               if pd.notna(row.get("address_detail")) else None),
+            "gps_coordinates": (str(row.get("gps_coordinates")).strip()
+                                if pd.notna(row.get("gps_coordinates")) else None),
+            "image_front": None, "image_layout": None, "image_siteplan": None,
+            "image_location_map": None, "gallery": [], "videos": [],
+            "status": "available", "created_at": now,
+        })
+
+    created = 0
+    if docs:
+        res = await db.units.insert_many(docs)
+        created = len(res.inserted_ids)
+    return {"ok": True, "created": created, "errors": errors, "total_rows": int(len(df))}
 
 
 class UnitUpdateInput(BaseModel):
@@ -518,6 +610,7 @@ class UnitUpdateInput(BaseModel):
     image_siteplan: str | None = None
     image_location_map: str | None = None
     gps_coordinates: str | None = None
+    videos: list[str] | None = None
     gallery: list[str] | None = None
 
 

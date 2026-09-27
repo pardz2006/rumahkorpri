@@ -17,7 +17,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
-import { FileDown, PenLine, Stamp, FileText, Plus, Building2, ImagePlus, Pencil, Trash2, Home, Copy, MapPin, CopyPlus } from "lucide-react";
+import { FileDown, PenLine, Stamp, FileText, Plus, Building2, ImagePlus, Pencil, Trash2, Home, Copy, MapPin, CopyPlus, Upload, Video, X } from "lucide-react";
 
 function SignaturePad({ onChange }) {
   const canvasRef = useRef(null);
@@ -101,6 +101,30 @@ function GalleryInput({ value = [], onChange, testid }) {
   );
 }
 
+function VideoInput({ value = [], onChange, testid }) {
+  const setAt = (i, v) => onChange(value.map((x, idx) => (idx === i ? v : x)));
+  const add = () => onChange([...(value || []), ""]);
+  const remove = (i) => onChange(value.filter((_, idx) => idx !== i));
+  return (
+    <div>
+      <Label className="text-xs text-slate-500 flex items-center gap-1"><Video className="h-3.5 w-3.5" /> Video Walkthrough (tautan YouTube / MP4)</Label>
+      <div className="mt-1 space-y-2">
+        {(value || []).map((v, i) => (
+          <div key={i} className="flex gap-2">
+            <Input data-testid={`${testid}-${i}`} placeholder="https://youtube.com/watch?v=..." value={v} onChange={(e) => setAt(i, e.target.value)} />
+            <button type="button" onClick={() => remove(i)} data-testid={`${testid}-remove-${i}`}
+              className="h-9 w-9 shrink-0 grid place-items-center rounded-lg hover:bg-red-50 text-red-500"><X className="h-4 w-4" /></button>
+          </div>
+        ))}
+        <button type="button" onClick={add} data-testid={`${testid}-add`}
+          className="text-xs font-medium text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1">
+          <Plus className="h-3.5 w-3.5" /> Tambah tautan video
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function DeveloperDashboard() {
   const [queue, setQueue] = useState([]);
   const [approveFor, setApproveFor] = useState(null);
@@ -114,9 +138,15 @@ export default function DeveloperDashboard() {
   const [deleteUnit, setDeleteUnit] = useState(null);
   const [saving, setSaving] = useState(false);
   const emptyProject = { name: "", location: "", address_detail: "", developer_name: "", description: "", image: null, program: "KOMERSIAL", bank: "Bank BTN" };
-  const emptyUnit = { project_id: "", type: "", block: "", number: "", price: "", land_area: "", building_area: "", address_detail: "", image_front: null, image_layout: null, image_siteplan: null, image_location_map: null, gps_coordinates: "", gallery: [], bulk: false, start_number: 1, count: 5 };
+  const emptyUnit = { project_id: "", type: "", block: "", number: "", price: "", land_area: "", building_area: "", address_detail: "", image_front: null, image_layout: null, image_siteplan: null, image_location_map: null, gps_coordinates: "", gallery: [], videos: [], bulk: false, start_number: 1, count: 5 };
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [unitForm, setUnitForm] = useState(emptyUnit);
+  const [showImport, setShowImport] = useState(false);
+  const [importProject, setImportProject] = useState("");
+  const [importFile, setImportFile] = useState(null);
+  const [importFileName, setImportFileName] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
 
   const load = () => {
     api.get("/developer/spr-queue").then((r) => setQueue(r.data)).catch(() => {});
@@ -136,7 +166,7 @@ export default function DeveloperDashboard() {
       address_detail: u.address_detail || "",
       image_front: u.image_front || null, image_layout: u.image_layout || null, image_siteplan: u.image_siteplan || null,
       image_location_map: u.image_location_map || null, gps_coordinates: u.gps_coordinates || "",
-      gallery: u.gallery || [], bulk: false, start_number: 1, count: 5,
+      gallery: u.gallery || [], videos: u.videos || [], bulk: false, start_number: 1, count: 5,
     });
     setShowUnit(true);
   };
@@ -149,7 +179,7 @@ export default function DeveloperDashboard() {
       address_detail: u.address_detail || "",
       image_front: u.image_front || null, image_layout: u.image_layout || null, image_siteplan: u.image_siteplan || null,
       image_location_map: u.image_location_map || null, gps_coordinates: u.gps_coordinates || "",
-      gallery: u.gallery || [], bulk: false, start_number: 1, count: 5,
+      gallery: u.gallery || [], videos: u.videos || [], bulk: false, start_number: 1, count: 5,
     });
     setShowUnit(true);
     toast.info("Data unit disalin. Ubah Blok & No. Unit lalu simpan.");
@@ -221,6 +251,44 @@ export default function DeveloperDashboard() {
     } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
   };
 
+  const openImport = () => {
+    setImportProject(projects[0]?.id || ""); setImportFile(null); setImportFileName(""); setImportResult(null); setShowImport(true);
+  };
+
+  const pickImportFile = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setImportFileName(f.name);
+    setImportFile(await fileToDataUrl(f));
+    setImportResult(null);
+  };
+
+  const submitImport = async () => {
+    if (!importProject) { toast.error("Pilih proyek tujuan"); return; }
+    if (!importFile) { toast.error("Pilih file CSV / Excel"); return; }
+    setImporting(true);
+    try {
+      const { data } = await api.post("/developer/units/import", {
+        project_id: importProject, file_name: importFileName, file_data: importFile,
+      });
+      setImportResult(data);
+      toast.success(`${data.created} unit berhasil diimpor dari ${data.total_rows} baris`);
+      load();
+    } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
+    finally { setImporting(false); }
+  };
+
+  const downloadTemplate = () => {
+    const csv = "type,block,number,price,land_area,building_area,address_detail,gps_coordinates\n" +
+      "Tipe 36/72,A,01,168000000,72,36,Blok A No.01,-6.2415, 106.9925\n" +
+      "Tipe 45/90,B,02,232000000,90,45,Blok B No.02,\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "template-unit.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const approve = async () => {
     setBusy(true);
     try {
@@ -244,6 +312,9 @@ export default function DeveloperDashboard() {
             <p className="text-slate-500 mt-1">Tambah proyek & unit, tinjau pembayaran, setujui SPR.</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={openImport} data-testid="import-units-btn">
+              <Upload className="h-4 w-4 mr-1.5" /> Impor CSV/Excel
+            </Button>
             <Button variant="outline" onClick={openAddProject} data-testid="add-project-btn">
               <Building2 className="h-4 w-4 mr-1.5" /> Tambah Proyek
             </Button>
@@ -465,11 +536,66 @@ export default function DeveloperDashboard() {
             </div>
             <ImageInput label="Peta Lokasi dari Jalan Raya" value={unitForm.image_location_map} onChange={(v) => setUnitForm({ ...unitForm, image_location_map: v })} testid="uf-image-location-map" />
             <GalleryInput value={unitForm.gallery} onChange={(v) => setUnitForm({ ...unitForm, gallery: v })} testid="uf-gallery" />
+            <VideoInput value={unitForm.videos} onChange={(v) => setUnitForm({ ...unitForm, videos: v })} testid="uf-video" />
           </div>
           <DialogFooter>
             <Button onClick={submitUnit} disabled={saving || !unitForm.type || !unitForm.price || !unitForm.project_id} data-testid="submit-unit-btn"
               className="w-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90">
               {saving ? "Menyimpan..." : editUnitId ? "Simpan Perubahan" : "Simpan Unit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog impor CSV/Excel */}
+      <Dialog open={showImport} onOpenChange={setShowImport}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Impor Unit Massal (CSV / Excel)</DialogTitle>
+            <DialogDescription>Buat puluhan unit sekaligus dengan harga berbeda dari satu file.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Proyek Tujuan</Label>
+              <Select value={importProject} onValueChange={setImportProject}>
+                <SelectTrigger data-testid="import-project"><SelectValue placeholder="Pilih proyek" /></SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — {p.location}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Kolom wajib: <b>type, block, number, price</b> (opsional: land_area, building_area, address_detail, gps_coordinates)</span>
+              <button onClick={downloadTemplate} data-testid="download-template-btn"
+                className="text-[hsl(var(--primary))] font-medium hover:underline inline-flex items-center gap-1 whitespace-nowrap">
+                <FileDown className="h-3.5 w-3.5" /> Unduh Template
+              </button>
+            </div>
+            <label className="block cursor-pointer">
+              <input type="file" accept=".csv,.xlsx,.xls" className="hidden" data-testid="import-file" onChange={pickImportFile} />
+              <div className="rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
+                <Upload className="h-7 w-7 mx-auto text-slate-400" />
+                <p className="text-sm text-slate-600 mt-2">{importFileName || "Klik untuk pilih file CSV / Excel"}</p>
+              </div>
+            </label>
+            {importResult && (
+              <div data-testid="import-result" className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm">
+                <p className="text-slate-700"><b className="text-[hsl(var(--primary))]">{importResult.created}</b> unit dibuat dari {importResult.total_rows} baris.</p>
+                {importResult.errors?.length > 0 && (
+                  <div className="mt-2 max-h-32 overflow-y-auto">
+                    <p className="text-red-600 font-medium">{importResult.errors.length} baris dilewati:</p>
+                    <ul className="list-disc list-inside text-red-500 text-xs mt-1 space-y-0.5">
+                      {importResult.errors.map((er, i) => <li key={i}>{er}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={submitImport} disabled={importing || !importFile || !importProject} data-testid="submit-import-btn"
+              className="w-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90">
+              {importing ? "Mengimpor..." : "Impor Unit"}
             </Button>
           </DialogFooter>
         </DialogContent>
