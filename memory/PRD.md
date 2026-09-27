@@ -21,6 +21,7 @@ Import project dari GitHub repository: https://github.com/pardz2006/rumahkorpri,
 - 2026-09-27: Logo diperbesar 2x (navbar h-20, header h-24; halaman gelap 72px dalam kotak putih). Teks brand menjadi "RUMAH KORPRI" kapital — RUMAH biru tua (#1E3A8A), KORPRI gold (#D4AF37); di latar gelap teks diberi pill putih agar terbaca. Title tab menjadi "RUMAH KORPRI | Pemesanan & CRM KPR".
 - 2026-09-27: Logo diganti memakai logo terlampir dari user (disimpan lokal di frontend/public/logo_rumah_korpri.png, LOGO_URL kini path lokal); favicon ikut memakai logo baru.
 - 2026-09-27: Logo diperkecil 50% (navbar h-10, header kembali h-16; halaman gelap h-9) agar seimbang dengan teks brand. Tema diselaraskan ke warna logo: primary hijau→biru tua (224 64% 33%), aksen oranye→gold (43 89% 38%), secondary→tint biru muda, hero overlay & ring & chart colors ikut biru tua/gold.
+- 2026-09-27: Backfill seluruh 49 unit contoh via /app/scripts/fill_demo_unit_fields.py — image_siteplan (aerial perumahan per proyek), image_location_map, gps_coordinates (offset dari lat/lng proyek), gallery (3 foto interior), videos (YouTube house tour rumah subsidi), address_detail. Semua field terisi (0 kosong). Unit Palangka Raya milik PT Steven Pengharapan Sejati dikecualikan (saat ini belum ada di DB environment ini; logika pengecualian sudah tersedia di script).
 
 ## Catatan Teknis
 - requirements.txt: baris `litellm @ <url>#sha256=...` konflik dengan dependensi emergentintegrations saat resolve; install dilakukan dengan filter baris tersebut (litellm tetap terpasang via emergentintegrations).
