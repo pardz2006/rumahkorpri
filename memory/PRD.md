@@ -116,3 +116,10 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 - **Denah Blok Interaktif**: komponen `BlockPlan` di ProjectDetail — grid kavling dikelompokkan per blok, warna per status (hijau tersedia/kuning dipesan/abu terjual), klik kavling tersedia membuka detail unit. Legenda status di atas grid.
 - **Galeri Video**: field `videos: list[str]` pada unit (tautan YouTube/MP4, tanpa upload). Form developer punya `VideoInput` (tambah/hapus tautan). Detail unit menampilkan `VideoGallery` (embed YouTube iframe / <video> untuk MP4) di bawah galeri foto.
 - Verifikasi: import CSV 3 baris → 3 unit dibuat OK; denah blok, embed video YouTube, dialog impor terverifikasi via screenshot.
+
+## Iterasi 17 — Super Admin Kelola Login + Sembunyikan Developer + Ganti Password (2026-09-27)
+- **Pardz Super Admin** (pardz2006@gmail.com, is_superuser): tab "Kelola Pengguna" kini punya CRUD penuh — tambah, edit (nama/peran/telepon/kota/perusahaan/bank + reset password opsional, email dikunci), hapus (konfirmasi), dan enable/disable login. Endpoint: PUT/DELETE /api/admin/users/{id}, PATCH .../status. Akun superuser terlindungi (tidak bisa diubah/hapus/nonaktif); tidak bisa hapus akun sendiri.
+- **Nonaktifkan login**: auth.py memblokir user `disabled` di login (403) dan di get_current_user (token lama tak berlaku).
+- **Sembunyikan Developer + Produk**: PATCH /api/admin/users/{id}/visibility {hidden} (khusus admin_developer). Bila `hidden`, proyek developer itu hilang dari /api/projects publik & detail proyeknya 404. Tombol mata (Eye/EyeOff) hanya muncul di baris developer.
+- **Ganti Kata Sandi (semua user)**: POST /api/auth/change-password (verifikasi sandi lama, min 6 char). UI: menu dropdown user di Navbar → "Ganti Kata Sandi" (dialog current/new/confirm) untuk semua peran.
+- Verifikasi: testing agent 100% (backend 9/9 pytest + frontend E2E), tanpa isu. Semua password akun demo dikembalikan ke semula.

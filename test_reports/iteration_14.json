@@ -1,0 +1,22 @@
+{
+  "summary": "Iteration 14: Super-Admin (Pardz) user management + per-developer visibility toggle + change-password. All backend (9/9) and frontend flows verified end-to-end through the public preview URL.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration14_admin_pwd.py",
+    "/app/test_reports/pytest/iteration_14.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AdminUpdateUserInput accepts `role` change on any managed user. Consider validating role transitions (e.g., role change from admin_developer to consumer leaves stale `company` field and orphans projects). Not blocking, just data-hygiene.",
+    "PATCH /admin/users/{id}/visibility silently ignores non-admin_developer accounts by returning 400, but front-end already hides the eye button so this is fine. No change needed."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration14_admin_pwd.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "pardz2006@gmail.com/korpri123 (super), consumer4/consumer6/@rumahkorpri.com/consumer123, developer2/developer3@rumahkorpri.com/developer123. All passwords reverted to originals after tests.",
+  "seed_data_creation": "Created and deleted a temporary developer 'test_ui_<ts>@rumahkorpri.com / TEST PT UI' during UI test. Also created/deleted 'TEST_iter14_<ts>' via API. No residual test data.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend results: 9/9 pytest passed for test_iteration14_admin_pwd.py. Verified: non-super admin_korpri gets 403 on /admin/users; create/list/edit/delete flow works; Pardz superuser is protected from edit/status/visibility/delete; hiding developer@rumahkorpri.com reduces public /api/projects from 12->10 (2 projects) and returns 404 on detail; enabling/disabling consumer2 blocks/unblocks login with 403 'Akun Anda dinonaktifkan'; change-password rejects wrong current pw (400/401), succeeds with correct, old pw no longer works. Frontend UI: Kelola Pengguna tab visible only for Pardz, add/edit dialog uses testids uf-name/uf-email/uf-password/uf-role/uf-company/uf-bank/uf-phone/uf-city, submit-user-btn; row actions edit-user-<id>, delete-user-<id> (confirm dialog confirm-delete-user), toggle-status-<id>, toggle-visibility-<id> (rendered only for admin_developer). Pardz row shows '—' with no action buttons. Nav user dropdown trigger is data-testid='nav-user-btn', menu item nav-change-password opens dialog with pwd-current/pwd-new/pwd-confirm/pwd-submit and shows toast 'Kata sandi berhasil diperbarui'. NOTE: /api/auth/login response uses key 'token' (not 'access_token'); backend lower-cases email on create — always compare emails case-insensitively in tests. Frontend login route is /login (not /masuk). Consumer landing page is /portal, developer /crm (used by Admin KORPRI too, super-admin has extra tab).",
+  "rca of the issue": "N/A — all features working."
+}
