@@ -453,6 +453,58 @@ async def create_unit(inp: UnitCreateInput,
     return clean(await db.units.find_one({"_id": res.inserted_id}))
 
 
+class UnitBulkCreateInput(UnitCreateInput):
+    number: str | None = None  # ignored for bulk; range drives numbering
+    start_number: int = 1
+    count: int = 5
+    number_prefix: str = ""
+    number_pad: int = 2
+
+
+@api.post("/developer/units/bulk")
+async def create_units_bulk(inp: UnitBulkCreateInput,
+                            user: dict = Depends(require_roles("admin_developer", "admin_korpri"))):
+    p = await db.projects.find_one({"_id": ObjectId(inp.project_id)})
+    if not p:
+        raise HTTPException(404, "Proyek tidak ditemukan")
+    await _assert_project_owner(p, user)
+    if inp.count < 1 or inp.count > 50:
+        raise HTTPException(400, "Jumlah unit harus antara 1 dan 50")
+    for img in (inp.image_front, inp.image_layout, inp.image_siteplan, inp.image_location_map):
+        if img and len(img) > 8_000_000:
+            raise HTTPException(400, "Ukuran gambar terlalu besar (maks ~6 MB per foto)")
+
+    block = inp.block.upper()
+    numbers = [f"{inp.number_prefix}{str(inp.start_number + i).zfill(inp.number_pad)}"
+               for i in range(inp.count)]
+    existing = {u["number"] async for u in
+                db.units.find({"project_id": inp.project_id, "block": block}, {"number": 1})}
+    clash = [n for n in numbers if n in existing]
+    if clash:
+        raise HTTPException(400, f"Nomor sudah ada di Blok {block}: {', '.join(clash)}")
+
+    # Upload shared media once, reuse served paths across all units.
+    shared = {
+        "image_front": store_media_or_400(inp.image_front, "units"),
+        "image_layout": store_media_or_400(inp.image_layout, "units"),
+        "image_siteplan": store_media_or_400(inp.image_siteplan, "units"),
+        "image_location_map": store_media_or_400(inp.image_location_map, "units"),
+        "gallery": [store_media_or_400(g, "units") for g in (inp.gallery or [])],
+    }
+    now = datetime.now(timezone.utc).isoformat()
+    docs = []
+    for n in numbers:
+        docs.append({
+            "project_id": inp.project_id, "project_name": p["name"],
+            "type": inp.type, "block": block, "number": n, "price": inp.price,
+            "land_area": inp.land_area, "building_area": inp.building_area,
+            "address_detail": inp.address_detail, "gps_coordinates": inp.gps_coordinates,
+            **shared, "status": "available", "created_at": now,
+        })
+    result = await db.units.insert_many(docs)
+    return {"ok": True, "created": len(result.inserted_ids), "numbers": numbers}
+
+
 class UnitUpdateInput(BaseModel):
     type: str | None = None
     block: str | None = None

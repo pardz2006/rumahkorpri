@@ -17,7 +17,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
-import { FileDown, PenLine, Stamp, FileText, Plus, Building2, ImagePlus, Pencil, Trash2, Home, Copy, MapPin } from "lucide-react";
+import { FileDown, PenLine, Stamp, FileText, Plus, Building2, ImagePlus, Pencil, Trash2, Home, Copy, MapPin, CopyPlus } from "lucide-react";
 
 function SignaturePad({ onChange }) {
   const canvasRef = useRef(null);
@@ -71,6 +71,36 @@ function ImageInput({ label, value, onChange, testid }) {
   );
 }
 
+function GalleryInput({ value = [], onChange, testid }) {
+  const add = async (e) => {
+    const files = Array.from(e.target.files || []);
+    const urls = await Promise.all(files.map((f) => fileToDataUrl(f)));
+    onChange([...(value || []), ...urls]);
+    e.target.value = "";
+  };
+  const remove = (i) => onChange(value.filter((_, idx) => idx !== i));
+  return (
+    <div>
+      <Label className="text-xs text-slate-500">Galeri Foto Rumah (beberapa foto — peminat dapat menggeser)</Label>
+      <div className="mt-1 flex flex-wrap gap-2">
+        {(value || []).map((g, i) => (
+          <div key={i} className="relative h-20 w-24 rounded-lg overflow-hidden border border-slate-200 group">
+            <img src={mediaUrl(g)} alt={`galeri ${i + 1}`} className="h-full w-full object-cover" />
+            <button type="button" onClick={() => remove(i)} data-testid={`${testid}-remove-${i}`}
+              className="absolute top-1 right-1 h-6 w-6 grid place-items-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+        <label className="h-20 w-24 rounded-lg border-2 border-dashed border-slate-300 grid place-items-center text-slate-400 hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))] transition-colors cursor-pointer">
+          <input type="file" accept="image/*" multiple className="hidden" data-testid={testid} onChange={add} />
+          <ImagePlus className="h-6 w-6" />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 export default function DeveloperDashboard() {
   const [queue, setQueue] = useState([]);
   const [approveFor, setApproveFor] = useState(null);
@@ -84,7 +114,7 @@ export default function DeveloperDashboard() {
   const [deleteUnit, setDeleteUnit] = useState(null);
   const [saving, setSaving] = useState(false);
   const emptyProject = { name: "", location: "", address_detail: "", developer_name: "", description: "", image: null, program: "KOMERSIAL", bank: "Bank BTN" };
-  const emptyUnit = { project_id: "", type: "", block: "", number: "", price: "", land_area: "", building_area: "", address_detail: "", image_front: null, image_layout: null, image_siteplan: null, image_location_map: null, gps_coordinates: "" };
+  const emptyUnit = { project_id: "", type: "", block: "", number: "", price: "", land_area: "", building_area: "", address_detail: "", image_front: null, image_layout: null, image_siteplan: null, image_location_map: null, gps_coordinates: "", gallery: [], bulk: false, start_number: 1, count: 5 };
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [unitForm, setUnitForm] = useState(emptyUnit);
 
@@ -106,6 +136,7 @@ export default function DeveloperDashboard() {
       address_detail: u.address_detail || "",
       image_front: u.image_front || null, image_layout: u.image_layout || null, image_siteplan: u.image_siteplan || null,
       image_location_map: u.image_location_map || null, gps_coordinates: u.gps_coordinates || "",
+      gallery: u.gallery || [], bulk: false, start_number: 1, count: 5,
     });
     setShowUnit(true);
   };
@@ -118,6 +149,7 @@ export default function DeveloperDashboard() {
       address_detail: u.address_detail || "",
       image_front: u.image_front || null, image_layout: u.image_layout || null, image_siteplan: u.image_siteplan || null,
       image_location_map: u.image_location_map || null, gps_coordinates: u.gps_coordinates || "",
+      gallery: u.gallery || [], bulk: false, start_number: 1, count: 5,
     });
     setShowUnit(true);
     toast.info("Data unit disalin. Ubah Blok & No. Unit lalu simpan.");
@@ -165,6 +197,13 @@ export default function DeveloperDashboard() {
       if (editUnitId) {
         await api.put(`/developer/units/${editUnitId}`, payload);
         toast.success("Unit berhasil diperbarui");
+      } else if (unitForm.bulk) {
+        const { data } = await api.post("/developer/units/bulk", {
+          ...payload,
+          start_number: Number(unitForm.start_number) || 1,
+          count: Number(unitForm.count) || 1,
+        });
+        toast.success(`${data.created} unit berurutan berhasil dibuat (No. ${data.numbers[0]}–${data.numbers[data.numbers.length - 1]})`);
       } else {
         await api.post("/developer/units", payload);
         toast.success("Unit berhasil ditambahkan & siap dipesan peminat");
@@ -386,8 +425,28 @@ export default function DeveloperDashboard() {
             <div className="grid grid-cols-3 gap-3">
               <div><Label className="text-xs">Tipe Rumah</Label><Input data-testid="uf-type" placeholder="Tipe 45/90" value={unitForm.type} onChange={(e) => setUnitForm({ ...unitForm, type: e.target.value })} /></div>
               <div><Label className="text-xs">Blok</Label><Input data-testid="uf-block" placeholder="B" value={unitForm.block} onChange={(e) => setUnitForm({ ...unitForm, block: e.target.value })} /></div>
-              <div><Label className="text-xs">No. Unit</Label><Input data-testid="uf-number" placeholder="12" value={unitForm.number} onChange={(e) => setUnitForm({ ...unitForm, number: e.target.value })} /></div>
+              <div><Label className="text-xs">No. Unit</Label><Input data-testid="uf-number" placeholder="12" disabled={unitForm.bulk} value={unitForm.bulk ? "" : unitForm.number} onChange={(e) => setUnitForm({ ...unitForm, number: e.target.value })} /></div>
             </div>
+            {!editUnitId && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" data-testid="uf-bulk-toggle" checked={unitForm.bulk}
+                    onChange={(e) => setUnitForm({ ...unitForm, bulk: e.target.checked })}
+                    className="h-4 w-4 accent-[hsl(var(--primary))]" />
+                  <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5"><CopyPlus className="h-4 w-4 text-[hsl(var(--accent))]" /> Duplikat Massal (buat No. berurutan)</span>
+                </label>
+                {unitForm.bulk && (
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div><Label className="text-xs">Mulai dari No.</Label><Input type="number" min={1} data-testid="uf-start-number" value={unitForm.start_number} onChange={(e) => setUnitForm({ ...unitForm, start_number: e.target.value })} /></div>
+                    <div><Label className="text-xs">Jumlah Unit</Label><Input type="number" min={1} max={50} data-testid="uf-count" value={unitForm.count} onChange={(e) => setUnitForm({ ...unitForm, count: e.target.value })} /></div>
+                    <p className="col-span-2 text-[11px] text-slate-500">
+                      Akan dibuat {Number(unitForm.count) || 0} unit di Blok {unitForm.block?.toUpperCase() || "?"}: No.{" "}
+                      {String(Number(unitForm.start_number) || 1).padStart(2, "0")}–{String((Number(unitForm.start_number) || 1) + (Number(unitForm.count) || 1) - 1).padStart(2, "0")} dengan data & foto yang sama.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div><Label className="text-xs">Harga (Rp)</Label><Input type="number" data-testid="uf-price" placeholder="350000000" value={unitForm.price} onChange={(e) => setUnitForm({ ...unitForm, price: e.target.value })} /></div>
               <div><Label className="text-xs">Luas Tanah (m²)</Label><Input type="number" data-testid="uf-land" value={unitForm.land_area} onChange={(e) => setUnitForm({ ...unitForm, land_area: e.target.value })} /></div>
@@ -405,6 +464,7 @@ export default function DeveloperDashboard() {
               <ImageInput label="Siteplan" value={unitForm.image_siteplan} onChange={(v) => setUnitForm({ ...unitForm, image_siteplan: v })} testid="uf-image-siteplan" />
             </div>
             <ImageInput label="Peta Lokasi dari Jalan Raya" value={unitForm.image_location_map} onChange={(v) => setUnitForm({ ...unitForm, image_location_map: v })} testid="uf-image-location-map" />
+            <GalleryInput value={unitForm.gallery} onChange={(v) => setUnitForm({ ...unitForm, gallery: v })} testid="uf-gallery" />
           </div>
           <DialogFooter>
             <Button onClick={submitUnit} disabled={saving || !unitForm.type || !unitForm.price || !unitForm.project_id} data-testid="submit-unit-btn"

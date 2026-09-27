@@ -104,3 +104,9 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 - Detail unit peminat (ProjectDetail): semua gambar (tampak depan, layout, siteplan, peta lokasi) kini zoomable via komponen `ZoomableImage` (lightbox full-screen, zoom in/out 100–500%, wheel/drag, reset). GPS ditampilkan sebagai tautan "Buka di Google Maps".
 - Duplikat/Clone unit: tombol Copy di kartu Kelola Unit menyalin semua data unit (tipe, harga, luas, gambar, GPS) ke form Tambah Unit dengan Blok/No dikosongkan agar developer cukup mengubah alamat unit lalu simpan.
 - Verifikasi: backend create-unit dengan gps_coordinates OK; form baru & zoom lightbox 200% terverifikasi via screenshot.
+
+## Iterasi 15 — Galeri Foto + Duplikat Massal + Rute ke Lokasi (2026-09-27)
+- **Galeri Foto**: form unit developer punya `GalleryInput` (upload beberapa foto, hapus per item; disimpan di `unit.gallery` via object storage). Detail unit peminat memakai komponen `UnitGallery` — carousel swipeable (panah prev/next, counter, thumbnail) menggabungkan foto tampak depan + galeri; tiap slide bisa di-zoom.
+- **Duplikat Massal**: endpoint `POST /api/developer/units/bulk` (UnitBulkCreateInput: start_number, count 1–50, number_prefix, number_pad) membuat banyak unit berurutan dalam 1 request dengan media di-upload sekali & dibagikan. Cek bentrok nomor. Form developer punya toggle "Duplikat Massal" + input Mulai No./Jumlah + preview rentang (mis. No. 01–05).
+- **Rute ke Lokasi**: di detail unit, di samping koordinat GPS ada tombol "Rute ke lokasi" → `google.com/maps/dir/?api=1&destination=<gps>&travelmode=driving` (navigasi dari posisi peminat).
+- Verifikasi: bulk API buat 5 unit (No.01–05) OK; galeri carousel, tombol rute, & toggle massal terverifikasi via screenshot.

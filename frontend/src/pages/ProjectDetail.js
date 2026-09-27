@@ -5,6 +5,7 @@ import { Navbar } from "../components/Navbar";
 import { KprSimulator } from "../components/KprSimulator";
 import { StatusBadge } from "../components/shared";
 import { ZoomableImage } from "../components/ZoomableImage";
+import { UnitGallery } from "../components/UnitGallery";
 import { api, rupiah, formatApiErrorDetail, mediaUrl } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
@@ -13,7 +14,7 @@ import { Slider } from "../components/ui/slider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "../components/ui/dialog";
-import { MapPin, Home, Maximize, ArrowLeft, QrCode, CreditCard, Navigation } from "lucide-react";
+import { MapPin, Home, Maximize, ArrowLeft, QrCode, CreditCard, Navigation, Route } from "lucide-react";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -115,11 +116,10 @@ export default function ProjectDetail() {
             <DialogDescription>{project.name} · {project.location}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <ZoomableImage
-              src={unitDetail?.image_front || project.image}
-              alt="Tampak depan" label={`${unitDetail?.type} — Tampak Depan`}
-              testid="unit-detail-front"
-              className="h-56 rounded-xl border border-slate-200" />
+            <UnitGallery
+              images={[unitDetail?.image_front, ...(unitDetail?.gallery || [])]}
+              fallback={project.image}
+              alt={unitDetail?.type} label={`${unitDetail?.type || "Rumah"} — Foto`} />
             {(unitDetail?.image_layout || unitDetail?.image_siteplan) && (
               <div className="grid grid-cols-2 gap-3">
                 {unitDetail?.image_layout && (
@@ -142,12 +142,19 @@ export default function ProjectDetail() {
               </div>
             )}
             {unitDetail?.gps_coordinates && (
-              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unitDetail.gps_coordinates)}`}
-                target="_blank" rel="noreferrer" data-testid="unit-detail-gps-link"
-                className="flex items-center justify-between gap-2 rounded-lg border border-[hsl(var(--primary))]/30 bg-[hsl(var(--secondary))]/40 px-4 py-3 text-sm hover:bg-[hsl(var(--secondary))]/70 transition-colors">
-                <span className="flex items-center gap-2 text-slate-700"><Navigation className="h-4 w-4 text-[hsl(var(--primary))]" /> Koordinat GPS: <b className="font-medium">{unitDetail.gps_coordinates}</b></span>
-                <span className="text-[hsl(var(--primary))] font-medium whitespace-nowrap">Buka di Maps →</span>
-              </a>
+              <div className="flex flex-wrap gap-2">
+                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unitDetail.gps_coordinates)}`}
+                  target="_blank" rel="noreferrer" data-testid="unit-detail-gps-link"
+                  className="flex-1 min-w-[160px] flex items-center justify-between gap-2 rounded-lg border border-[hsl(var(--primary))]/30 bg-[hsl(var(--secondary))]/40 px-4 py-3 text-sm hover:bg-[hsl(var(--secondary))]/70 transition-colors">
+                  <span className="flex items-center gap-2 text-slate-700"><Navigation className="h-4 w-4 text-[hsl(var(--primary))]" /> {unitDetail.gps_coordinates}</span>
+                  <span className="text-[hsl(var(--primary))] font-medium whitespace-nowrap">Lihat →</span>
+                </a>
+                <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(unitDetail.gps_coordinates)}&travelmode=driving`}
+                  target="_blank" rel="noreferrer" data-testid="unit-detail-route-btn"
+                  className="flex items-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-4 py-3 text-sm font-medium text-white hover:bg-[hsl(var(--primary))]/90 transition-colors">
+                  <Route className="h-4 w-4" /> Rute ke lokasi
+                </a>
+              </div>
             )}
             <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm bg-[hsl(var(--muted))]/50 rounded-lg p-4">
               <p className="text-slate-500">Harga</p><p className="font-semibold text-[hsl(var(--primary))]">{rupiah(unitDetail?.price)}</p>
