@@ -123,3 +123,8 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 - **Sembunyikan Developer + Produk**: PATCH /api/admin/users/{id}/visibility {hidden} (khusus admin_developer). Bila `hidden`, proyek developer itu hilang dari /api/projects publik & detail proyeknya 404. Tombol mata (Eye/EyeOff) hanya muncul di baris developer.
 - **Ganti Kata Sandi (semua user)**: POST /api/auth/change-password (verifikasi sandi lama, min 6 char). UI: menu dropdown user di Navbar → "Ganti Kata Sandi" (dialog current/new/confirm) untuk semua peran.
 - Verifikasi: testing agent 100% (backend 9/9 pytest + frontend E2E), tanpa isu. Semua password akun demo dikembalikan ke semula.
+
+## Bug Fix — Error "Tidak terautentikasi" saat Pardz membuat developer (2026-09-27)
+- Akar masalah: bila token tersimpan gagal divalidasi /auth/me (mis. saat backend restart), AuthContext menghapus token tapi pengguna tetap di dashboard; aksi berikutnya (buat user) terkirim TANPA header Authorization → 401 "Tidak terautentikasi". Endpoint admin/users sendiri selalu OK.
+- Perbaikan: response interceptor axios di frontend/src/lib/api.js — setiap respons 401 menghapus `korpri_token` dan redirect bersih ke /login (kecuali sudah di halaman login, agar tidak loop saat salah password).
+- Verifikasi: testing agent iterasi 15 → 4/4 PASS (buat developer sukses tanpa error, token rusak → redirect ke /login, salah password tidak loop, regresi login consumer OK).

@@ -1,0 +1,28 @@
+{
+  "summary": "Verified bug fix for 'Tidak terautentikasi' toast during Super Admin (Pardz) creating new developer user, plus the axios 401 interceptor behavior. All 4 targeted scenarios PASSED. Backend not re-tested (out of scope per E1's note; iteration_14 already confirmed CRUD).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_details": {
+    "T1_pardz_create_developer": "PASS - Pardz logged in via demo-pardz2006@gmail.com quick-login (landed on /crm), opened Kelola Pengguna tab, filled add-user dialog (name/email/password/role=Mitra Developer/company=PT Test Company), submitted. POST /api/admin/users returned 200. No 'Tidak terautentikasi' toast. New row appeared in table (found 2 text occurrences incl. dropdown/table). Cleanup: clicked delete-user-<id>, confirmed with confirm-delete-user; row count went to 0.",
+    "T2_garbage_token_redirect": "PASS - Set localStorage 'korpri_token' to 'garbage.invalid.token', navigated to /crm; interceptor caught 401, cleared token (localStorage now null), redirected to /login cleanly.",
+    "T3_wrong_password_no_loop": "PASS - Wrong password on /login stayed on /login (no redirect loop), 401 handled without triggering interceptor redirect (already on /login).",
+    "T4_consumer_regression": "PASS - consumer@rumahkorpri.com quick-login landed on /portal with 'Berhasil masuk' toast."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Login page renders two buttons with identical data-testid='demo-pardz2006@gmail.com' (grid appears duplicated for different viewport layouts). Not a bug, but duplicate testids can confuse selectors under strict mode. Consider making the mobile/desktop variant testids unique (e.g., append -mobile).",
+    "api.js interceptor uses window.location.href for redirect which forces a full page reload; acceptable for auth reset but slightly janky vs react-router navigate. Fine as-is for this use case."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not re-tested per scope)", "frontend": "100% (4/4)"},
+  "seed_data_creation": "Created and deleted transient test user testdev_<ts>@example.com; state clean.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug fix (axios 401 interceptor in /app/frontend/src/lib/api.js) verified in iteration_15. Pardz lands on /crm (not /admin) after login. Login page has duplicate data-testid='demo-<email>' buttons (desktop+mobile variants) — always use .first when locating.",
+  "rca of the issue": "Previously AuthContext removed an invalid token on /auth/me failure but kept the user on the dashboard, so subsequent requests (e.g. POST /api/admin/users) went out without Authorization header -> backend returned 401 -> UI showed 'Tidak terautentikasi'. Fix: global axios response interceptor now removes 'korpri_token' and hard-redirects to /login on any 401 (unless already on /login), preventing stuck sessions."
+}
