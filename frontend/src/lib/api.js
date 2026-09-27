@@ -25,6 +25,8 @@ api.interceptors.response.use(
 
 export const BACKEND = BASE;
 
+export const LOGO_URL = "https://www.rumahkorpri.com/logo_rumah_korpri.png";
+
 export function formatApiErrorDetail(detail) {
   if (detail == null) return "Terjadi kesalahan. Silakan coba lagi.";
   if (typeof detail === "string") return detail;

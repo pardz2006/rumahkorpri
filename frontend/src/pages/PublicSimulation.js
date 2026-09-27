@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { api, rupiah } from "../lib/api";
+import { api, rupiah, LOGO_URL } from "../lib/api";
 import { Button } from "../components/ui/button";
-import { Home, Calculator, Download, Loader2, ArrowRight } from "lucide-react";
+import { Calculator, Download, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PublicSimulation() {
@@ -55,7 +55,7 @@ export default function PublicSimulation() {
       <header className="bg-[hsl(var(--primary))] grain">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 text-white">
-            <div className="h-9 w-9 rounded-lg bg-white/15 grid place-items-center"><Home className="h-5 w-5" /></div>
+            <div className="h-9 w-9 rounded-lg bg-white grid place-items-center p-1"><img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-full w-full object-contain" /></div>
             <div>
               <span className="font-heading font-bold">Rumah KORPRI</span>
               <p className="text-white/70 text-xs">Pemesanan & CRM KPR</p>

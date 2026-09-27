@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth, ROLE_HOME } from "../context/AuthContext";
-import { formatApiErrorDetail } from "../lib/api";
+import { formatApiErrorDetail, LOGO_URL } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Home, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 const DEMO = [
   { group: "Admin KORPRI", accounts: [
@@ -113,7 +113,7 @@ export default function Login() {
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-between bg-[hsl(var(--primary))] p-12 grain relative">
         <Link to="/" className="relative flex items-center gap-2.5 text-white">
-          <div className="h-9 w-9 rounded-lg bg-white/15 grid place-items-center"><Home className="h-5 w-5" /></div>
+          <div className="h-9 w-9 rounded-lg bg-white grid place-items-center p-1"><img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-full w-full object-contain" /></div>
           <span className="font-heading font-bold text-lg">Rumah KORPRI</span>
         </Link>
         <div className="relative">

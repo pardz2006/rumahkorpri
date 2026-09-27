@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth, ROLE_HOME, ROLE_LABEL } from "../context/AuthContext";
-import { api, formatApiErrorDetail } from "../lib/api";
-import { Bell, LogOut, Home, KeyRound } from "lucide-react";
+import { api, formatApiErrorDetail, LOGO_URL } from "../lib/api";
+import { Bell, LogOut, KeyRound } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
@@ -54,9 +54,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/85 border-b border-slate-200/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link to="/" data-testid="nav-logo" className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-lg bg-[hsl(var(--primary))] grid place-items-center">
-            <Home className="h-5 w-5 text-white" />
-          </div>
+          <img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-10 w-10 object-contain" />
           <div className="leading-tight">
             <p className="font-heading font-bold text-slate-800">Rumah KORPRI</p>
             <p className="text-[10px] text-slate-500 -mt-0.5">Pemesanan & CRM KPR</p>
