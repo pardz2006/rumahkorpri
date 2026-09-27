@@ -9,95 +9,139 @@ const MAX_SCALE = 6;
 export function ZoomableImage({ src, alt, label, className, testid, fit = "cover" }) {
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [baseSize, setBaseSize] = useState(null);
   const viewRef = useRef(null);
   const imgRef = useRef(null);
-  const drag = useRef(null);
-  const pinch = useRef(null);
   const scaleRef = useRef(1);
-  const posRef = useRef({ x: 0, y: 0 });
+  const dragRef = useRef(null);
+  const pendingAnchor = useRef(null);
 
-  // Batasi geser agar gambar tidak hilang keluar area
-  const clampPos = useCallback((p, s) => {
+  const resolved = mediaUrl(src);
+
+  const computeBase = useCallback(() => {
     const c = viewRef.current;
     const img = imgRef.current;
-    if (!c || !img || !img.naturalWidth) return p;
+    if (!c || !img || !img.naturalWidth) return null;
     const cw = c.clientWidth, ch = c.clientHeight;
     const ir = img.naturalWidth / img.naturalHeight;
-    let bw = cw, bh = cw / ir;
-    if (bh > ch) { bh = ch; bw = ch * ir; }
-    const mx = Math.max(0, (bw * s - cw) / 2);
-    const my = Math.max(0, (bh * s - ch) / 2);
-    return { x: Math.min(Math.max(p.x, -mx), mx), y: Math.min(Math.max(p.y, -my), my) };
+    let w = cw, h = cw / ir;
+    if (h > ch) { h = ch; w = ch * ir; }
+    return { w, h };
   }, []);
 
-  const setView = useCallback((s, p) => {
-    s = Math.min(Math.max(s, MIN_SCALE), MAX_SCALE);
-    p = s === 1 ? { x: 0, y: 0 } : clampPos(p, s);
+  const centerScroll = useCallback(() => {
+    const c = viewRef.current;
+    if (!c) return;
+    c.scrollLeft = (c.scrollWidth - c.clientWidth) / 2;
+    c.scrollTop = (c.scrollHeight - c.clientHeight) / 2;
+  }, []);
+
+  // Zoom dengan mempertahankan titik di bawah kursor (default: tengah)
+  const zoomTo = useCallback((next, ev) => {
+    const c = viewRef.current;
+    const s = Math.min(Math.max(next, MIN_SCALE), MAX_SCALE);
+    if (c && s !== scaleRef.current) {
+      const rect = c.getBoundingClientRect();
+      const ax = ev && ev.clientX != null ? ev.clientX - rect.left : c.clientWidth / 2;
+      const ay = ev && ev.clientY != null ? ev.clientY - rect.top : c.clientHeight / 2;
+      pendingAnchor.current = c.scrollWidth > 0
+        ? { ax, ay, rx: (c.scrollLeft + ax) / c.scrollWidth, ry: (c.scrollTop + ay) / c.scrollHeight }
+        : null;
+    }
     scaleRef.current = s;
-    posRef.current = p;
     setScale(s);
-    setPos(p);
-  }, [clampPos]);
+  }, []);
 
-  const reset = useCallback(() => setView(1, { x: 0, y: 0 }), [setView]);
+  const reset = useCallback(() => { pendingAnchor.current = null; scaleRef.current = 1; setScale(1); }, []);
   const openLightbox = () => { reset(); setOpen(true); };
-  const zoomIn = () => setView(scaleRef.current + 0.5, posRef.current);
-  const zoomOut = () => setView(scaleRef.current - 0.5, posRef.current);
 
-  // Wheel zoom: React memasang listener wheel sebagai passive, jadi pasang native non-passive
+  // Hitung ulang ukuran dasar saat dibuka / resize
+  useEffect(() => {
+    if (!open) return;
+    const update = () => setBaseSize(computeBase());
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [open, computeBase]);
+
+  // Terapkan posisi scroll setelah skala/ukuran berubah
+  useEffect(() => {
+    const c = viewRef.current;
+    if (!open || !c) return;
+    const a = pendingAnchor.current;
+    pendingAnchor.current = null;
+    if (a && scale > 1) {
+      c.scrollLeft = a.rx * c.scrollWidth - a.ax;
+      c.scrollTop = a.ry * c.scrollHeight - a.ay;
+    } else {
+      centerScroll();
+    }
+  }, [scale, baseSize, open, centerScroll]);
+
+  // Wheel zoom + pinch zoom: listener native (React memasang listener passive)
   useEffect(() => {
     const el = viewRef.current;
     if (!open || !el) return;
+    let pinch = null;
     const onWheel = (e) => {
       e.preventDefault();
-      setView(scaleRef.current + (e.deltaY < 0 ? 0.3 : -0.3), posRef.current);
+      zoomTo(scaleRef.current + (e.deltaY < 0 ? 0.3 : -0.3), e);
     };
+    const onTs = (e) => {
+      if (e.touches.length === 2) {
+        const [a, b] = e.touches;
+        pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), s: scaleRef.current };
+      }
+    };
+    const onTm = (e) => {
+      if (e.touches.length === 2 && pinch && pinch.d > 0) {
+        e.preventDefault();
+        const [a, b] = e.touches;
+        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        zoomTo((pinch.s * d) / pinch.d, { clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 });
+      }
+    };
+    const onTe = () => { pinch = null; };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [open, setView]);
+    el.addEventListener("touchstart", onTs, { passive: true });
+    el.addEventListener("touchmove", onTm, { passive: false });
+    el.addEventListener("touchend", onTe);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTs);
+      el.removeEventListener("touchmove", onTm);
+      el.removeEventListener("touchend", onTe);
+    };
+  }, [open, zoomTo]);
 
-  // Geser dengan mouse: dengarkan di window agar drag cepat tidak terputus
+  // Drag mouse untuk menggeser (scroll) — dilacak di window agar tidak terputus
   useEffect(() => {
     if (!dragging) return;
     const mm = (e) => {
-      if (!drag.current) return;
-      setView(scaleRef.current, { x: e.clientX - drag.current.x, y: e.clientY - drag.current.y });
+      const c = viewRef.current;
+      const d = dragRef.current;
+      if (!c || !d) return;
+      c.scrollLeft = d.sl - (e.clientX - d.x);
+      c.scrollTop = d.st - (e.clientY - d.y);
     };
-    const mu = () => { drag.current = null; setDragging(false); };
+    const mu = () => { dragRef.current = null; setDragging(false); };
     window.addEventListener("mousemove", mm);
     window.addEventListener("mouseup", mu);
     return () => { window.removeEventListener("mousemove", mm); window.removeEventListener("mouseup", mu); };
-  }, [dragging, setView]);
+  }, [dragging]);
 
-  const onDown = (e) => {
-    if (e.touches && e.touches.length === 2) {
-      const [a, b] = e.touches;
-      pinch.current = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), s: scaleRef.current };
-      drag.current = null;
-      return;
-    }
-    if (scaleRef.current <= 1) return;
-    const t = e.touches ? e.touches[0] : e;
-    drag.current = { x: t.clientX - posRef.current.x, y: t.clientY - posRef.current.y };
+  const onMouseDown = (e) => {
+    const c = viewRef.current;
+    if (!c || scaleRef.current <= 1) return;
+    e.preventDefault();
+    dragRef.current = { x: e.clientX, y: e.clientY, sl: c.scrollLeft, st: c.scrollTop };
     setDragging(true);
   };
-  const onMove = (e) => {
-    if (e.touches && e.touches.length === 2 && pinch.current) {
-      const [a, b] = e.touches;
-      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      if (pinch.current.d > 0) setView((pinch.current.s * d) / pinch.current.d, posRef.current);
-      return;
-    }
-    if (e.touches && drag.current) {
-      const t = e.touches[0];
-      setView(scaleRef.current, { x: t.clientX - drag.current.x, y: t.clientY - drag.current.y });
-    }
-  };
-  const onUp = () => { drag.current = null; pinch.current = null; setDragging(false); };
 
-  const resolved = mediaUrl(src);
+  const imgStyle = baseSize
+    ? { width: baseSize.w * scale, height: baseSize.h * scale, maxWidth: "none", maxHeight: "none" }
+    : { maxWidth: "100%", maxHeight: "100%" };
 
   return (
     <>
@@ -123,22 +167,23 @@ export function ZoomableImage({ src, alt, label, className, testid, fit = "cover
           )}
           <div
             ref={viewRef}
-            className="relative h-[85vh] w-full overflow-hidden grid place-items-center select-none touch-none"
-            onMouseDown={onDown}
-            onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
-            onDoubleClick={() => setView(scaleRef.current === 1 ? 2.5 : 1, posRef.current)}
+            className="relative h-[85vh] w-full overflow-auto select-none [touch-action:pan-x_pan-y]"
+            onMouseDown={onMouseDown}
+            onDoubleClick={(e) => zoomTo(scaleRef.current === 1 ? 2.5 : 1, e)}
             style={{ cursor: scale > 1 ? (dragging ? "grabbing" : "grab") : "zoom-in" }}>
-            <img ref={imgRef} src={resolved} alt={alt} draggable={false}
-              className="max-h-full max-w-full object-contain"
-              style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`, transition: dragging ? "none" : "transform 150ms ease-out" }} />
+            <div className="w-max min-w-full min-h-full grid place-items-center">
+              <img ref={imgRef} src={resolved} alt={alt} draggable={false}
+                onLoad={() => setBaseSize(computeBase())}
+                className="object-contain" style={imgStyle} />
+            </div>
           </div>
           <span className="absolute top-12 left-1/2 -translate-x-1/2 z-10 text-[11px] text-white/90 bg-black/50 rounded-full px-3 py-1 pointer-events-none">
-            Scroll / klik 2x / cubit untuk zoom{scale > 1 ? " · seret untuk menggeser" : ""}
+            Scroll / klik 2x / cubit untuk zoom{scale > 1 ? " · seret atau geser scrollbar untuk memindahkan" : ""}
           </span>
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/60 backdrop-blur rounded-full px-2 py-1.5">
-            <button onClick={zoomOut} data-testid="zoom-out-btn" className="h-9 w-9 grid place-items-center rounded-full text-white hover:bg-white/15 transition-colors"><ZoomOut className="h-5 w-5" /></button>
+            <button onClick={() => zoomTo(scaleRef.current - 0.5)} data-testid="zoom-out-btn" className="h-9 w-9 grid place-items-center rounded-full text-white hover:bg-white/15 transition-colors"><ZoomOut className="h-5 w-5" /></button>
             <span className="text-white text-xs font-medium tabular-nums w-12 text-center">{Math.round(scale * 100)}%</span>
-            <button onClick={zoomIn} data-testid="zoom-in-btn" className="h-9 w-9 grid place-items-center rounded-full text-white hover:bg-white/15 transition-colors"><ZoomIn className="h-5 w-5" /></button>
+            <button onClick={() => zoomTo(scaleRef.current + 0.5)} data-testid="zoom-in-btn" className="h-9 w-9 grid place-items-center rounded-full text-white hover:bg-white/15 transition-colors"><ZoomIn className="h-5 w-5" /></button>
             <button onClick={reset} data-testid="zoom-reset-btn" className="h-9 w-9 grid place-items-center rounded-full text-white hover:bg-white/15 transition-colors"><RotateCcw className="h-4 w-4" /></button>
           </div>
           <button onClick={() => { reset(); setOpen(false); }} data-testid="zoom-close-btn"
