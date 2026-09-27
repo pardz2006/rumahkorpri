@@ -55,9 +55,9 @@ export default function PublicSimulation() {
       <header className="bg-[hsl(var(--primary))] grain">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 text-white">
-            <div className="h-9 w-9 rounded-lg bg-white grid place-items-center p-1"><img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-full w-full object-contain" /></div>
+            <div className="h-[72px] w-[72px] rounded-xl bg-white grid place-items-center p-1.5"><img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-full w-full object-contain" /></div>
             <div>
-              <span className="font-heading font-bold">Rumah KORPRI</span>
+              <span className="font-heading font-bold text-xl bg-white rounded-lg px-3 py-1"><span className="text-[#1E3A8A]">RUMAH</span> <span className="text-[#D4AF37]">KORPRI</span></span>
               <p className="text-white/70 text-xs">Pemesanan & CRM KPR</p>
             </div>
           </Link>

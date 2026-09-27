@@ -113,8 +113,8 @@ export default function Login() {
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-between bg-[hsl(var(--primary))] p-12 grain relative">
         <Link to="/" className="relative flex items-center gap-2.5 text-white">
-          <div className="h-9 w-9 rounded-lg bg-white grid place-items-center p-1"><img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-full w-full object-contain" /></div>
-          <span className="font-heading font-bold text-lg">Rumah KORPRI</span>
+          <div className="h-[72px] w-[72px] rounded-xl bg-white grid place-items-center p-1.5"><img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-full w-full object-contain" /></div>
+          <span className="font-heading font-bold text-xl bg-white rounded-lg px-3 py-1.5"><span className="text-[#1E3A8A]">RUMAH</span> <span className="text-[#D4AF37]">KORPRI</span></span>
         </Link>
         <div className="relative">
           <h2 className="font-heading text-3xl font-bold text-white leading-tight">Satu platform untuk seluruh perjalanan KPR ASN.</h2>

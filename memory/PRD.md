@@ -18,6 +18,7 @@ Import project dari GitHub repository: https://github.com/pardz2006/rumahkorpri,
 - 2026-09-27: Import repo GitHub (branch main) ke /app, install dependencies backend (pip) & frontend (yarn), tambah JWT_SECRET di backend/.env, jalankan seed.py (akun admin/developer/bank + data proyek), update memory/test_credentials.md, verifikasi: API health OK, login admin OK, landing page render OK.
 - 2026-09-27: Peningkatan ZoomableImage — lightbox kini memakai container scroll native (scrollbar horizontal & vertikal muncul saat zoom), geser via scrollbar/drag mouse/sentuhan, zoom via tombol/scroll/klik 2x/cubit dengan anchor kursor, thumbnail layout/siteplan/peta object-contain agar tidak terpotong.
 - 2026-09-27: Logo Rumah KORPRI resmi (https://www.rumahkorpri.com/logo_rumah_korpri.png) dipasang di Navbar, halaman Login, dan PublicSimulation menggantikan ikon generik; URL diekspor sebagai LOGO_URL di lib/api.js.
+- 2026-09-27: Logo diperbesar 2x (navbar h-20, header h-24; halaman gelap 72px dalam kotak putih). Teks brand menjadi "RUMAH KORPRI" kapital — RUMAH biru tua (#1E3A8A), KORPRI gold (#D4AF37); di latar gelap teks diberi pill putih agar terbaca. Favicon browser memakai logo (dikonversi JPEG→PNG 256px di public/logo_rumah_korpri.png) dan title tab menjadi "RUMAH KORPRI | Pemesanan & CRM KPR".
 
 ## Catatan Teknis
 - requirements.txt: baris `litellm @ <url>#sha256=...` konflik dengan dependensi emergentintegrations saat resolve; install dilakukan dengan filter baris tersebut (litellm tetap terpasang via emergentintegrations).
