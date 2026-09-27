@@ -10,23 +10,23 @@
   --card-foreground: 222 24% 14%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 24% 14%;
-  --primary: 152 69% 19%;
+  --primary: 224 64% 33%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 151 41% 86%;
-  --secondary-foreground: 152 69% 15%;
+  --secondary: 221 68% 93%;
+  --secondary-foreground: 224 64% 25%;
   --muted: 150 16% 94%;
   --muted-foreground: 215 16% 40%;
-  --accent: 20 79% 43%;
+  --accent: 43 89% 38%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 72% 48%;
   --destructive-foreground: 0 0% 100%;
   --border: 214 20% 91%;
   --input: 214 20% 91%;
-  --ring: 152 69% 19%;
+  --ring: 224 64% 33%;
   --radius: 0.75rem;
-  --chart-1: 152 69% 25%;
-  --chart-2: 20 79% 50%;
-  --chart-3: 151 41% 60%;
+  --chart-1: 224 64% 40%;
+  --chart-2: 43 89% 45%;
+  --chart-3: 221 50% 60%;
   --chart-4: 42 87% 55%;
   --chart-5: 200 60% 45%;
 }
@@ -46,7 +46,7 @@ h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
 ::selection { background: hsl(var(--primary)); color: white; }
 
 .hero-overlay {
-  background: linear-gradient(115deg, rgba(15,81,50,0.94) 0%, rgba(15,81,50,0.72) 45%, rgba(15,81,50,0.25) 100%);
+  background: linear-gradient(115deg, rgba(30,58,138,0.94) 0%, rgba(30,58,138,0.72) 45%, rgba(30,58,138,0.25) 100%);
 }
 
 .grain::before {

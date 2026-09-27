@@ -20,6 +20,7 @@ Import project dari GitHub repository: https://github.com/pardz2006/rumahkorpri,
 - 2026-09-27: Logo Rumah KORPRI resmi (https://www.rumahkorpri.com/logo_rumah_korpri.png) dipasang di Navbar, halaman Login, dan PublicSimulation menggantikan ikon generik; URL diekspor sebagai LOGO_URL di lib/api.js.
 - 2026-09-27: Logo diperbesar 2x (navbar h-20, header h-24; halaman gelap 72px dalam kotak putih). Teks brand menjadi "RUMAH KORPRI" kapital — RUMAH biru tua (#1E3A8A), KORPRI gold (#D4AF37); di latar gelap teks diberi pill putih agar terbaca. Title tab menjadi "RUMAH KORPRI | Pemesanan & CRM KPR".
 - 2026-09-27: Logo diganti memakai logo terlampir dari user (disimpan lokal di frontend/public/logo_rumah_korpri.png, LOGO_URL kini path lokal); favicon ikut memakai logo baru.
+- 2026-09-27: Logo diperkecil 50% (navbar h-10, header kembali h-16; halaman gelap h-9) agar seimbang dengan teks brand. Tema diselaraskan ke warna logo: primary hijau→biru tua (224 64% 33%), aksen oranye→gold (43 89% 38%), secondary→tint biru muda, hero overlay & ring & chart colors ikut biru tua/gold.
 
 ## Catatan Teknis
 - requirements.txt: baris `litellm @ <url>#sha256=...` konflik dengan dependensi emergentintegrations saat resolve; install dilakukan dengan filter baris tersebut (litellm tetap terpasang via emergentintegrations).

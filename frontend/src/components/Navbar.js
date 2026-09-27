@@ -52,9 +52,9 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/85 border-b border-slate-200/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-24 flex items-center justify-between">
-        <Link to="/" data-testid="nav-logo" className="flex items-center gap-3">
-          <img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-20 w-20 object-contain" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <Link to="/" data-testid="nav-logo" className="flex items-center gap-2.5">
+          <img src={LOGO_URL} alt="Logo Rumah KORPRI" className="h-10 w-10 object-contain" />
           <div className="leading-tight">
             <p className="font-heading font-bold text-xl"><span className="text-[#1E3A8A]">RUMAH</span> <span className="text-[#D4AF37]">KORPRI</span></p>
             <p className="text-[10px] text-slate-500 -mt-0.5">Pemesanan & CRM KPR</p>
