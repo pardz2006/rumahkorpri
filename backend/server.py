@@ -344,6 +344,8 @@ class UnitCreateInput(BaseModel):
     image_front: str | None = None
     image_layout: str | None = None
     image_siteplan: str | None = None
+    image_location_map: str | None = None
+    gps_coordinates: str | None = None
     gallery: list[str] | None = None
 
 
@@ -442,6 +444,7 @@ async def create_unit(inp: UnitCreateInput,
     doc["image_front"] = store_media_or_400(doc.get("image_front"), "units")
     doc["image_layout"] = store_media_or_400(doc.get("image_layout"), "units")
     doc["image_siteplan"] = store_media_or_400(doc.get("image_siteplan"), "units")
+    doc["image_location_map"] = store_media_or_400(doc.get("image_location_map"), "units")
     doc["gallery"] = [store_media_or_400(g, "units") for g in (doc.get("gallery") or [])]
     doc["project_name"] = p["name"]
     doc["status"] = "available"
@@ -461,6 +464,8 @@ class UnitUpdateInput(BaseModel):
     image_front: str | None = None
     image_layout: str | None = None
     image_siteplan: str | None = None
+    image_location_map: str | None = None
+    gps_coordinates: str | None = None
     gallery: list[str] | None = None
 
 
@@ -484,7 +489,7 @@ async def update_unit(unit_id: str, inp: UnitUpdateInput,
                                        "_id": {"$ne": u["_id"]}})
         if dup:
             raise HTTPException(400, f"Unit Blok {new_block}/{new_number} sudah ada di proyek ini")
-    for field in ("image_front", "image_layout", "image_siteplan"):
+    for field in ("image_front", "image_layout", "image_siteplan", "image_location_map"):
         if field in updates:
             if len(updates[field]) > 8_000_000:
                 raise HTTPException(400, "Ukuran gambar terlalu besar (maks ~6 MB per foto)")

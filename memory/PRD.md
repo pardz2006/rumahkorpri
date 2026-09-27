@@ -98,3 +98,9 @@ Platform pemesanan rumah + CRM KPR yang menghubungkan 4 stakeholder: Peminat/ASN
 - Env: `JWT_SECRET` + `EMERGENT_LLM_KEY` ditambahkan ke backend/.env (dibutuhkan auth.py & storage.py); MONGO_URL/DB_NAME/CORS_ORIGINS/REACT_APP_BACKEND_URL tetap.
 - Verifikasi: supervisor backend+frontend RUNNING; /api health OK; seed jalan (12 proyek, 49 unit, 16 user demo); login admin OK; object storage terinisialisasi; landing page render sempurna.
 - Kredensial demo dicatat di memory/test_credentials.md. Twilio tidak dikonfigurasi → WhatsApp berjalan dalam mode simulasi (by design).
+
+## Iterasi 14 — Field Unit Baru + Zoom Gambar + Duplikat Unit (2026-09-27)
+- Field baru pada unit: `image_location_map` (gambar peta lokasi dari jalan raya, via object storage) & `gps_coordinates` (teks "lat, lng"). Ditambahkan di UnitCreateInput/UnitUpdateInput + store_media. Form developer punya input GPS & upload peta lokasi.
+- Detail unit peminat (ProjectDetail): semua gambar (tampak depan, layout, siteplan, peta lokasi) kini zoomable via komponen `ZoomableImage` (lightbox full-screen, zoom in/out 100–500%, wheel/drag, reset). GPS ditampilkan sebagai tautan "Buka di Google Maps".
+- Duplikat/Clone unit: tombol Copy di kartu Kelola Unit menyalin semua data unit (tipe, harga, luas, gambar, GPS) ke form Tambah Unit dengan Blok/No dikosongkan agar developer cukup mengubah alamat unit lalu simpan.
+- Verifikasi: backend create-unit dengan gps_coordinates OK; form baru & zoom lightbox 200% terverifikasi via screenshot.

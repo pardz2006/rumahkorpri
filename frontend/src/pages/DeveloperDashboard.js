@@ -17,7 +17,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
-import { FileDown, PenLine, Stamp, FileText, Plus, Building2, ImagePlus, Pencil, Trash2, Home } from "lucide-react";
+import { FileDown, PenLine, Stamp, FileText, Plus, Building2, ImagePlus, Pencil, Trash2, Home, Copy, MapPin } from "lucide-react";
 
 function SignaturePad({ onChange }) {
   const canvasRef = useRef(null);
@@ -84,7 +84,7 @@ export default function DeveloperDashboard() {
   const [deleteUnit, setDeleteUnit] = useState(null);
   const [saving, setSaving] = useState(false);
   const emptyProject = { name: "", location: "", address_detail: "", developer_name: "", description: "", image: null, program: "KOMERSIAL", bank: "Bank BTN" };
-  const emptyUnit = { project_id: "", type: "", block: "", number: "", price: "", land_area: "", building_area: "", address_detail: "", image_front: null, image_layout: null, image_siteplan: null };
+  const emptyUnit = { project_id: "", type: "", block: "", number: "", price: "", land_area: "", building_area: "", address_detail: "", image_front: null, image_layout: null, image_siteplan: null, image_location_map: null, gps_coordinates: "" };
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [unitForm, setUnitForm] = useState(emptyUnit);
 
@@ -105,8 +105,22 @@ export default function DeveloperDashboard() {
       price: u.price ?? "", land_area: u.land_area ?? "", building_area: u.building_area ?? "",
       address_detail: u.address_detail || "",
       image_front: u.image_front || null, image_layout: u.image_layout || null, image_siteplan: u.image_siteplan || null,
+      image_location_map: u.image_location_map || null, gps_coordinates: u.gps_coordinates || "",
     });
     setShowUnit(true);
+  };
+
+  const openCloneUnit = (u, projectId) => {
+    setEditUnitId(null);
+    setUnitForm({
+      project_id: projectId, type: u.type || "", block: u.block || "", number: "",
+      price: u.price ?? "", land_area: u.land_area ?? "", building_area: u.building_area ?? "",
+      address_detail: u.address_detail || "",
+      image_front: u.image_front || null, image_layout: u.image_layout || null, image_siteplan: u.image_siteplan || null,
+      image_location_map: u.image_location_map || null, gps_coordinates: u.gps_coordinates || "",
+    });
+    setShowUnit(true);
+    toast.info("Data unit disalin. Ubah Blok & No. Unit lalu simpan.");
   };
 
   const openAddProject = () => {
@@ -279,6 +293,10 @@ export default function DeveloperDashboard() {
                         <p className="text-sm font-semibold text-[hsl(var(--primary))]">{rupiah(u.price)}</p>
                         <div className="flex items-center gap-2 mt-1.5">
                           <StatusBadge status={u.status} />
+                          <button onClick={() => openCloneUnit(u, p.id)} data-testid={`clone-unit-${u.id}`}
+                            className="h-7 w-7 grid place-items-center rounded-lg hover:bg-slate-100 text-slate-500" title="Duplikat unit">
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
                           <button onClick={() => openEditUnit(u, p.id)} data-testid={`edit-unit-${u.id}`}
                             className="h-7 w-7 grid place-items-center rounded-lg hover:bg-slate-100 text-slate-500" title="Edit">
                             <Pencil className="h-3.5 w-3.5" />
@@ -376,11 +394,17 @@ export default function DeveloperDashboard() {
               <div><Label className="text-xs">Luas Bangunan (m²)</Label><Input type="number" data-testid="uf-building" value={unitForm.building_area} onChange={(e) => setUnitForm({ ...unitForm, building_area: e.target.value })} /></div>
             </div>
             <div><Label className="text-xs">Alamat Detail Unit</Label><Input data-testid="uf-address" placeholder="Blok B No.12, Jl. Harmoni Raya, Bekasi Timur..." value={unitForm.address_detail} onChange={(e) => setUnitForm({ ...unitForm, address_detail: e.target.value })} /></div>
+            <div>
+              <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" /> Koordinat GPS Proyek</Label>
+              <Input data-testid="uf-gps" placeholder="-6.2415, 106.9925 (lat, lng)" value={unitForm.gps_coordinates} onChange={(e) => setUnitForm({ ...unitForm, gps_coordinates: e.target.value })} />
+              <p className="text-[11px] text-slate-400 mt-1">Salin dari Google Maps (klik kanan lokasi → koordinat). Peminat dapat langsung membukanya di Maps.</p>
+            </div>
             <ImageInput label="Foto Rumah Tampak Depan" value={unitForm.image_front} onChange={(v) => setUnitForm({ ...unitForm, image_front: v })} testid="uf-image-front" />
             <div className="grid grid-cols-2 gap-3">
               <ImageInput label="Layout Rumah" value={unitForm.image_layout} onChange={(v) => setUnitForm({ ...unitForm, image_layout: v })} testid="uf-image-layout" />
               <ImageInput label="Siteplan" value={unitForm.image_siteplan} onChange={(v) => setUnitForm({ ...unitForm, image_siteplan: v })} testid="uf-image-siteplan" />
             </div>
+            <ImageInput label="Peta Lokasi dari Jalan Raya" value={unitForm.image_location_map} onChange={(v) => setUnitForm({ ...unitForm, image_location_map: v })} testid="uf-image-location-map" />
           </div>
           <DialogFooter>
             <Button onClick={submitUnit} disabled={saving || !unitForm.type || !unitForm.price || !unitForm.project_id} data-testid="submit-unit-btn"

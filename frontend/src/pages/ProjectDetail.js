@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Navbar } from "../components/Navbar";
 import { KprSimulator } from "../components/KprSimulator";
 import { StatusBadge } from "../components/shared";
+import { ZoomableImage } from "../components/ZoomableImage";
 import { api, rupiah, formatApiErrorDetail, mediaUrl } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
@@ -12,7 +13,7 @@ import { Slider } from "../components/ui/slider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "../components/ui/dialog";
-import { MapPin, Home, Maximize, ArrowLeft, QrCode, CreditCard } from "lucide-react";
+import { MapPin, Home, Maximize, ArrowLeft, QrCode, CreditCard, Navigation } from "lucide-react";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -114,19 +115,39 @@ export default function ProjectDetail() {
             <DialogDescription>{project.name} · {project.location}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <img src={mediaUrl(unitDetail?.image_front) || mediaUrl(project.image)} alt="Tampak depan" data-testid="unit-detail-front"
-              className="w-full h-56 object-cover rounded-xl" />
+            <ZoomableImage
+              src={unitDetail?.image_front || project.image}
+              alt="Tampak depan" label={`${unitDetail?.type} — Tampak Depan`}
+              testid="unit-detail-front"
+              className="h-56 rounded-xl border border-slate-200" />
             {(unitDetail?.image_layout || unitDetail?.image_siteplan) && (
               <div className="grid grid-cols-2 gap-3">
                 {unitDetail?.image_layout && (
                   <div><p className="text-xs text-slate-500 mb-1">Layout Rumah</p>
-                    <img src={mediaUrl(unitDetail.image_layout)} alt="Layout" data-testid="unit-detail-layout" className="w-full h-40 object-cover rounded-lg border border-slate-200" /></div>
+                    <ZoomableImage src={unitDetail.image_layout} alt="Layout" label="Layout Rumah"
+                      testid="unit-detail-layout" className="h-40 rounded-lg border border-slate-200" /></div>
                 )}
                 {unitDetail?.image_siteplan && (
                   <div><p className="text-xs text-slate-500 mb-1">Siteplan</p>
-                    <img src={mediaUrl(unitDetail.image_siteplan)} alt="Siteplan" data-testid="unit-detail-siteplan" className="w-full h-40 object-cover rounded-lg border border-slate-200" /></div>
+                    <ZoomableImage src={unitDetail.image_siteplan} alt="Siteplan" label="Siteplan"
+                      testid="unit-detail-siteplan" className="h-40 rounded-lg border border-slate-200" /></div>
                 )}
               </div>
+            )}
+            {unitDetail?.image_location_map && (
+              <div>
+                <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Peta Lokasi dari Jalan Raya</p>
+                <ZoomableImage src={unitDetail.image_location_map} alt="Peta Lokasi" label="Peta Lokasi dari Jalan Raya"
+                  testid="unit-detail-location-map" className="h-48 rounded-lg border border-slate-200" />
+              </div>
+            )}
+            {unitDetail?.gps_coordinates && (
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unitDetail.gps_coordinates)}`}
+                target="_blank" rel="noreferrer" data-testid="unit-detail-gps-link"
+                className="flex items-center justify-between gap-2 rounded-lg border border-[hsl(var(--primary))]/30 bg-[hsl(var(--secondary))]/40 px-4 py-3 text-sm hover:bg-[hsl(var(--secondary))]/70 transition-colors">
+                <span className="flex items-center gap-2 text-slate-700"><Navigation className="h-4 w-4 text-[hsl(var(--primary))]" /> Koordinat GPS: <b className="font-medium">{unitDetail.gps_coordinates}</b></span>
+                <span className="text-[hsl(var(--primary))] font-medium whitespace-nowrap">Buka di Maps →</span>
+              </a>
             )}
             <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm bg-[hsl(var(--muted))]/50 rounded-lg p-4">
               <p className="text-slate-500">Harga</p><p className="font-semibold text-[hsl(var(--primary))]">{rupiah(unitDetail?.price)}</p>
