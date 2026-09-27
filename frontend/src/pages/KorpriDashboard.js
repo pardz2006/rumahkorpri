@@ -16,8 +16,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import {
   Users, FileCheck, MessageSquare, AlertTriangle, Send, FileText, Eye, CheckCircle2, XCircle,
-  UserPlus, ShieldCheck,
+  UserPlus, ShieldCheck, EyeOff, Power, Pencil, Trash2,
 } from "lucide-react";
 
 export default function KorpriDashboard() {
@@ -32,6 +36,8 @@ export default function KorpriDashboard() {
   const [allUsers, setAllUsers] = useState([]);
   const [showUser, setShowUser] = useState(false);
   const [savingUser, setSavingUser] = useState(false);
+  const [editUserId, setEditUserId] = useState(null);
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null);
   const emptyUser = { name: "", email: "", password: "", role: "consumer", phone: "", company: "", bank: "", city: "", province: "" };
   const [userForm, setUserForm] = useState(emptyUser);
 
@@ -44,16 +50,55 @@ export default function KorpriDashboard() {
   };
   useEffect(() => { load(); }, [user]);
 
+  const openAddUser = () => { setEditUserId(null); setUserForm(emptyUser); setShowUser(true); };
+  const openEditUser = (u) => {
+    setEditUserId(u.id);
+    setUserForm({ name: u.name || "", email: u.email || "", password: "", role: u.role || "consumer",
+      phone: u.phone || "", company: u.company || "", bank: u.bank || "", city: u.city || "", province: u.province || "" });
+    setShowUser(true);
+  };
+
   const submitUser = async () => {
     setSavingUser(true);
     try {
       const payload = { ...userForm };
       ["phone", "company", "bank", "city", "province"].forEach((k) => { if (!payload[k]) payload[k] = null; });
-      await api.post("/admin/users", payload);
-      toast.success(`Pengguna ${userForm.email} berhasil dibuat`);
-      setShowUser(false); setUserForm(emptyUser); load();
+      if (editUserId) {
+        if (!payload.password) delete payload.password;
+        delete payload.email;
+        await api.put(`/admin/users/${editUserId}`, payload);
+        toast.success(`Pengguna ${userForm.name} berhasil diperbarui`);
+      } else {
+        await api.post("/admin/users", payload);
+        toast.success(`Pengguna ${userForm.email} berhasil dibuat`);
+      }
+      setShowUser(false); setEditUserId(null); setUserForm(emptyUser); load();
     } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
     finally { setSavingUser(false); }
+  };
+
+  const toggleStatus = async (u) => {
+    try {
+      await api.patch(`/admin/users/${u.id}/status`, { disabled: !u.disabled });
+      toast.success(u.disabled ? "Login diaktifkan" : "Login dinonaktifkan");
+      load();
+    } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
+  };
+
+  const toggleVisibility = async (u) => {
+    try {
+      await api.patch(`/admin/users/${u.id}/visibility`, { hidden: !u.hidden });
+      toast.success(u.hidden ? "Developer & produknya kembali ditampilkan" : "Developer & produknya disembunyikan sementara");
+      load();
+    } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
+  };
+
+  const confirmDeleteUser = async () => {
+    try {
+      await api.delete(`/admin/users/${deleteUserTarget.id}`);
+      toast.success("Pengguna dihapus");
+      setDeleteUserTarget(null); load();
+    } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
   };
 
   const ROLE_TEXT = { consumer: "Peminat", admin_developer: "Developer", btn_evaluator: "Bank", admin_korpri: "Admin KORPRI" };
@@ -232,30 +277,69 @@ export default function KorpriDashboard() {
                   <ShieldCheck className="h-4 w-4 text-[hsl(var(--primary))]" />
                   <p className="text-sm">Anda masuk sebagai <b>Super Admin</b> — dapat membuat akun Developer, Bank, dan Peminat.</p>
                 </div>
-                <Button onClick={() => setShowUser(true)} data-testid="add-user-btn"
+                <Button onClick={openAddUser} data-testid="add-user-btn"
                   className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/90">
                   <UserPlus className="h-4 w-4 mr-1.5" /> Tambah Pengguna
                 </Button>
               </div>
               <div data-testid="users-table" className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-x-auto">
-                <table className="w-full text-sm min-w-[560px]">
+                <table className="w-full text-sm min-w-[720px]">
                   <thead className="bg-[hsl(var(--muted))]/60 text-slate-500 text-left">
                     <tr>
                       <th className="px-5 py-3 font-medium">Nama</th>
                       <th className="px-5 py-3 font-medium">Email</th>
                       <th className="px-5 py-3 font-medium">Peran</th>
-                      <th className="px-5 py-3 font-medium">Entitas</th>
+                      <th className="px-5 py-3 font-medium">Status</th>
+                      <th className="px-5 py-3 font-medium text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {allUsers.map((u) => (
-                      <tr key={u.id} data-testid={`user-row-${u.id}`}>
+                      <tr key={u.id} data-testid={`user-row-${u.id}`} className={u.disabled ? "bg-red-50/40" : ""}>
                         <td className="px-5 py-3">
                           <p className="font-medium text-slate-800">{u.name}{u.is_superuser && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))] font-semibold">SUPER</span>}</p>
+                          <p className="text-xs text-slate-400">{u.company || u.bank || u.city || "-"}</p>
                         </td>
                         <td className="px-5 py-3 text-slate-600">{u.email}</td>
                         <td className="px-5 py-3 text-slate-600">{ROLE_TEXT[u.role] || u.role}</td>
-                        <td className="px-5 py-3 text-slate-500 text-xs">{u.company || u.bank || u.city || "-"}</td>
+                        <td className="px-5 py-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full ${u.disabled ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                              {u.disabled ? "Nonaktif" : "Aktif"}
+                            </span>
+                            {u.role === "admin_developer" && u.hidden && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">Produk disembunyikan</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          {u.is_superuser ? (
+                            <p className="text-right text-xs text-slate-400">—</p>
+                          ) : (
+                            <div className="flex justify-end gap-1.5">
+                              {u.role === "admin_developer" && (
+                                <button onClick={() => toggleVisibility(u)} data-testid={`toggle-visibility-${u.id}`}
+                                  title={u.hidden ? "Tampilkan produk" : "Sembunyikan produk"}
+                                  className="h-8 w-8 grid place-items-center rounded-lg hover:bg-slate-100 text-slate-500">
+                                  {u.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              )}
+                              <button onClick={() => toggleStatus(u)} data-testid={`toggle-status-${u.id}`}
+                                title={u.disabled ? "Aktifkan login" : "Nonaktifkan login"}
+                                className={`h-8 w-8 grid place-items-center rounded-lg hover:bg-slate-100 ${u.disabled ? "text-emerald-600" : "text-amber-600"}`}>
+                                <Power className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => openEditUser(u)} data-testid={`edit-user-${u.id}`}
+                                title="Edit" className="h-8 w-8 grid place-items-center rounded-lg hover:bg-slate-100 text-slate-500">
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setDeleteUserTarget(u)} data-testid={`delete-user-${u.id}`}
+                                title="Hapus" className="h-8 w-8 grid place-items-center rounded-lg hover:bg-red-50 text-red-500">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -265,6 +349,66 @@ export default function KorpriDashboard() {
           )}
         </Tabs>
       </div>
+
+      {/* Dialog tambah / edit pengguna */}
+      <Dialog open={showUser} onOpenChange={(o) => { setShowUser(o); if (!o) { setEditUserId(null); setUserForm(emptyUser); } }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editUserId ? "Edit Pengguna" : "Tambah Pengguna Baru"}</DialogTitle>
+            <DialogDescription>Kelola akun login Developer, Bank, atau Peminat.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="text-xs">Nama Lengkap</Label><Input data-testid="uf-name" value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} /></div>
+            <div><Label className="text-xs">Email {editUserId && <span className="text-slate-400">(tidak dapat diubah)</span>}</Label>
+              <Input data-testid="uf-email" type="email" disabled={!!editUserId} value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} /></div>
+            <div><Label className="text-xs">Kata Sandi {editUserId && <span className="text-slate-400">(kosongkan bila tidak diubah)</span>}</Label>
+              <Input data-testid="uf-password" type="password" placeholder={editUserId ? "••••••" : ""} value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} /></div>
+            <div>
+              <Label className="text-xs">Peran</Label>
+              <Select value={userForm.role} onValueChange={(v) => setUserForm({ ...userForm, role: v })}>
+                <SelectTrigger data-testid="uf-role"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="consumer">Peminat / ASN</SelectItem>
+                  <SelectItem value="admin_developer">Mitra Developer</SelectItem>
+                  <SelectItem value="btn_evaluator">Analis Bank</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {userForm.role === "admin_developer" && (
+              <div><Label className="text-xs">Nama Perusahaan</Label><Input data-testid="uf-company" value={userForm.company} onChange={(e) => setUserForm({ ...userForm, company: e.target.value })} /></div>
+            )}
+            {userForm.role === "btn_evaluator" && (
+              <div><Label className="text-xs">Nama Bank</Label><Input data-testid="uf-bank" value={userForm.bank} onChange={(e) => setUserForm({ ...userForm, bank: e.target.value })} /></div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Telepon</Label><Input data-testid="uf-phone" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })} /></div>
+              <div><Label className="text-xs">Kota</Label><Input data-testid="uf-city" value={userForm.city} onChange={(e) => setUserForm({ ...userForm, city: e.target.value })} /></div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={submitUser} disabled={savingUser || !userForm.name || (!editUserId && (!userForm.email || !userForm.password))}
+              data-testid="submit-user-btn" className="w-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90">
+              {savingUser ? "Menyimpan..." : editUserId ? "Simpan Perubahan" : "Buat Pengguna"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Konfirmasi hapus pengguna */}
+      <AlertDialog open={!!deleteUserTarget} onOpenChange={(o) => !o && setDeleteUserTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus pengguna ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Akun <b>{deleteUserTarget?.name}</b> ({deleteUserTarget?.email}) akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="cancel-delete-user">Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteUser} data-testid="confirm-delete-user" className="bg-red-600 hover:bg-red-700">Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Berkas detail dialog */}
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>

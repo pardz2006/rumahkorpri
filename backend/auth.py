@@ -53,6 +53,8 @@ async def get_current_user(request: Request) -> dict:
         user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
         if not user:
             raise HTTPException(status_code=401, detail="User tidak ditemukan")
+        if user.get("disabled"):
+            raise HTTPException(status_code=403, detail="Akun Anda dinonaktifkan. Hubungi Admin KORPRI.")
         return clean(user)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token kedaluwarsa")
@@ -136,8 +138,27 @@ async def login(inp: LoginInput):
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(inp.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Email atau kata sandi salah")
+    if user.get("disabled"):
+        raise HTTPException(status_code=403, detail="Akun Anda dinonaktifkan. Hubungi Admin KORPRI.")
     token = create_access_token(str(user["_id"]), email, user["role"])
     return {"token": token, "user": clean(user)}
+
+
+class ChangePasswordInput(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(inp: ChangePasswordInput, user: dict = Depends(get_current_user)):
+    if len(inp.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Kata sandi baru minimal 6 karakter")
+    doc = await db.users.find_one({"_id": ObjectId(user["id"])})
+    if not doc or not verify_password(inp.current_password, doc["password_hash"]):
+        raise HTTPException(status_code=400, detail="Kata sandi saat ini salah")
+    await db.users.update_one({"_id": ObjectId(user["id"])},
+                              {"$set": {"password_hash": hash_password(inp.new_password)}})
+    return {"ok": True}
 
 
 @router.get("/me")

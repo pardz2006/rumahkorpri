@@ -275,7 +275,10 @@ def _domicile_score(p: dict, city: str, province: str) -> int:
 
 @api.get("/projects")
 async def list_projects(request: Request):
-    projects = [clean(p) async for p in db.projects.find().sort("created_at", 1)]
+    hidden_devs = {str(u["_id"]) async for u in
+                   db.users.find({"role": "admin_developer", "hidden": True}, {"_id": 1})}
+    projects = [clean(p) async for p in db.projects.find().sort("created_at", 1)
+                if p.get("developer_id") not in hidden_devs]
     for p in projects:
         units = [clean(u) async for u in db.units.find({"project_id": p["id"]})]
         p["units"] = units
@@ -297,6 +300,9 @@ async def get_project(project_id: str):
     p = await db.projects.find_one({"_id": ObjectId(project_id)})
     if not p:
         raise HTTPException(404, "Proyek tidak ditemukan")
+    dev = await db.users.find_one({"_id": ObjectId(p["developer_id"])}) if p.get("developer_id") else None
+    if dev and dev.get("hidden"):
+        raise HTTPException(404, "Proyek tidak tersedia")
     p = clean(p)
     p["units"] = [clean(u) async for u in db.units.find({"project_id": project_id})]
     return p
@@ -1164,7 +1170,79 @@ async def admin_create_user(inp: AdminCreateUserInput,
     return clean(await db.users.find_one({"_id": res.inserted_id}))
 
 
-# ---------------- notifications & wa logs ----------------
+class AdminUpdateUserInput(BaseModel):
+    name: str | None = None
+    role: str | None = None
+    phone: str | None = None
+    company: str | None = None
+    bank: str | None = None
+    city: str | None = None
+    province: str | None = None
+    password: str | None = None
+
+
+class AdminStatusInput(BaseModel):
+    disabled: bool
+
+
+class AdminVisibilityInput(BaseModel):
+    hidden: bool
+
+
+async def _get_managed_user(user_id: str):
+    target = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not target:
+        raise HTTPException(404, "Pengguna tidak ditemukan")
+    if target.get("is_superuser"):
+        raise HTTPException(403, "Akun Super Admin tidak dapat diubah dari sini")
+    return target
+
+
+@api.put("/admin/users/{user_id}")
+async def admin_update_user(user_id: str, inp: AdminUpdateUserInput,
+                            user: dict = Depends(require_roles("admin_korpri"))):
+    _require_superuser(user)
+    await _get_managed_user(user_id)
+    updates = {k: v for k, v in inp.model_dump().items() if v is not None and k != "password"}
+    if inp.role and inp.role not in ("consumer", "admin_developer", "btn_evaluator"):
+        raise HTTPException(400, "Peran tidak valid")
+    if inp.password:
+        if len(inp.password) < 6:
+            raise HTTPException(400, "Kata sandi minimal 6 karakter")
+        updates["password_hash"] = auth.hash_password(inp.password)
+    if updates:
+        await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+    return clean(await db.users.find_one({"_id": ObjectId(user_id)}))
+
+
+@api.patch("/admin/users/{user_id}/status")
+async def admin_set_user_status(user_id: str, inp: AdminStatusInput,
+                                user: dict = Depends(require_roles("admin_korpri"))):
+    _require_superuser(user)
+    await _get_managed_user(user_id)
+    await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"disabled": inp.disabled}})
+    return clean(await db.users.find_one({"_id": ObjectId(user_id)}))
+
+
+@api.patch("/admin/users/{user_id}/visibility")
+async def admin_set_user_visibility(user_id: str, inp: AdminVisibilityInput,
+                                    user: dict = Depends(require_roles("admin_korpri"))):
+    _require_superuser(user)
+    target = await _get_managed_user(user_id)
+    if target.get("role") != "admin_developer":
+        raise HTTPException(400, "Hanya akun Developer yang memiliki produk untuk disembunyikan")
+    await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"hidden": inp.hidden}})
+    return clean(await db.users.find_one({"_id": ObjectId(user_id)}))
+
+
+@api.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, user: dict = Depends(require_roles("admin_korpri"))):
+    _require_superuser(user)
+    if user_id == user["id"]:
+        raise HTTPException(400, "Anda tidak dapat menghapus akun sendiri")
+    await _get_managed_user(user_id)
+    await db.users.delete_one({"_id": ObjectId(user_id)})
+    return {"ok": True}
 @api.get("/notifications")
 async def get_notifications(user: dict = Depends(get_current_user)):
     return [clean(n) async for n in

@@ -1,18 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth, ROLE_HOME, ROLE_LABEL } from "../context/AuthContext";
-import { api } from "../lib/api";
-import { Bell, LogOut, Home } from "lucide-react";
+import { api, formatApiErrorDetail } from "../lib/api";
+import { Bell, LogOut, Home, KeyRound } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [notifs, setNotifs] = useState([]);
+  const [showPwd, setShowPwd] = useState(false);
+  const [pwd, setPwd] = useState({ current_password: "", new_password: "", confirm: "" });
+  const [savingPwd, setSavingPwd] = useState(false);
+
+  const submitPwd = async () => {
+    if (pwd.new_password.length < 6) { toast.error("Kata sandi baru minimal 6 karakter"); return; }
+    if (pwd.new_password !== pwd.confirm) { toast.error("Konfirmasi kata sandi tidak cocok"); return; }
+    setSavingPwd(true);
+    try {
+      await api.post("/auth/change-password", { current_password: pwd.current_password, new_password: pwd.new_password });
+      toast.success("Kata sandi berhasil diperbarui");
+      setShowPwd(false); setPwd({ current_password: "", new_password: "", confirm: "" });
+    } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
+    finally { setSavingPwd(false); }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -96,6 +117,9 @@ export function Navbar() {
                   <DropdownMenuItem onClick={() => navigate(ROLE_HOME[user.role])} data-testid="nav-dashboard-link">
                     Dashboard Saya
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowPwd(true)} data-testid="nav-change-password">
+                    <KeyRound className="h-4 w-4 mr-2" /> Ganti Kata Sandi
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => { logout(); navigate("/"); }} data-testid="nav-logout-btn" className="text-red-600">
                     <LogOut className="h-4 w-4 mr-2" /> Keluar
@@ -106,6 +130,38 @@ export function Navbar() {
           )}
         </div>
       </div>
+
+      <Dialog open={showPwd} onOpenChange={setShowPwd}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ganti Kata Sandi</DialogTitle>
+            <DialogDescription>Perbarui kata sandi akun Anda secara berkala untuk keamanan.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Kata Sandi Saat Ini</Label>
+              <Input type="password" data-testid="pwd-current" value={pwd.current_password}
+                onChange={(e) => setPwd({ ...pwd, current_password: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Kata Sandi Baru</Label>
+              <Input type="password" data-testid="pwd-new" value={pwd.new_password}
+                onChange={(e) => setPwd({ ...pwd, new_password: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Konfirmasi Kata Sandi Baru</Label>
+              <Input type="password" data-testid="pwd-confirm" value={pwd.confirm}
+                onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={submitPwd} disabled={savingPwd || !pwd.current_password || !pwd.new_password}
+              data-testid="pwd-submit" className="w-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90">
+              {savingPwd ? "Menyimpan..." : "Simpan Kata Sandi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }
