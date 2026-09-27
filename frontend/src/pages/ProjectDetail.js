@@ -146,12 +146,12 @@ export default function ProjectDetail() {
               <div className="grid grid-cols-2 gap-3">
                 {unitDetail?.image_layout && (
                   <div><p className="text-xs text-slate-500 mb-1">Layout Rumah</p>
-                    <ZoomableImage src={unitDetail.image_layout} alt="Layout" label="Layout Rumah"
+                    <ZoomableImage src={unitDetail.image_layout} alt="Layout" label="Layout Rumah" fit="contain"
                       testid="unit-detail-layout" className="h-40 rounded-lg border border-slate-200" /></div>
                 )}
                 {unitDetail?.image_siteplan && (
                   <div><p className="text-xs text-slate-500 mb-1">Siteplan</p>
-                    <ZoomableImage src={unitDetail.image_siteplan} alt="Siteplan" label="Siteplan"
+                    <ZoomableImage src={unitDetail.image_siteplan} alt="Siteplan" label="Siteplan" fit="contain"
                       testid="unit-detail-siteplan" className="h-40 rounded-lg border border-slate-200" /></div>
                 )}
               </div>
@@ -159,7 +159,7 @@ export default function ProjectDetail() {
             {unitDetail?.image_location_map && (
               <div>
                 <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Peta Lokasi dari Jalan Raya</p>
-                <ZoomableImage src={unitDetail.image_location_map} alt="Peta Lokasi" label="Peta Lokasi dari Jalan Raya"
+                <ZoomableImage src={unitDetail.image_location_map} alt="Peta Lokasi" label="Peta Lokasi dari Jalan Raya" fit="contain"
                   testid="unit-detail-location-map" className="h-48 rounded-lg border border-slate-200" />
               </div>
             )}
