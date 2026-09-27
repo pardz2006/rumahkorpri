@@ -156,11 +156,18 @@ export default function ProjectDetail() {
                 )}
               </div>
             )}
-            {unitDetail?.image_location_map && (
+            {(unitDetail?.gps_coordinates || unitDetail?.image_location_map) && (
               <div>
                 <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Peta Lokasi dari Jalan Raya</p>
-                <ZoomableImage src={unitDetail.image_location_map} alt="Peta Lokasi" label="Peta Lokasi dari Jalan Raya" fit="contain"
-                  testid="unit-detail-location-map" className="h-48 rounded-lg border border-slate-200" />
+                {unitDetail?.gps_coordinates ? (
+                  <div className="rounded-lg border border-slate-200 overflow-hidden h-64" data-testid="unit-detail-location-map-embed">
+                    <iframe title="Peta Lokasi Unit" className="w-full h-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(unitDetail.gps_coordinates)}&z=16&output=embed`} />
+                  </div>
+                ) : (
+                  <ZoomableImage src={unitDetail.image_location_map} alt="Peta Lokasi" label="Peta Lokasi dari Jalan Raya" fit="contain"
+                    testid="unit-detail-location-map" className="h-48 rounded-lg border border-slate-200" />
+                )}
               </div>
             )}
             {projectMapsUrl && (
