@@ -16,7 +16,7 @@ import { Slider } from "../components/ui/slider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "../components/ui/dialog";
-import { MapPin, Home, Maximize, ArrowLeft, QrCode, CreditCard, Navigation, Route } from "lucide-react";
+import { MapPin, MapPinned, Home, Maximize, ArrowLeft, QrCode, CreditCard, Navigation, Route } from "lucide-react";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -51,6 +51,13 @@ export default function ProjectDetail() {
 
   if (!project) return <div className="min-h-screen"><Navbar /><div className="grid place-items-center py-40 text-slate-400">Memuat...</div></div>;
 
+  const projectMapsUrl = project.lat != null && project.lng != null
+    ? `https://www.google.com/maps/search/?api=1&query=${project.lat},${project.lng}`
+    : null;
+  const projectRouteUrl = project.lat != null && project.lng != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${project.lat},${project.lng}&travelmode=driving`
+    : null;
+
   return (
     <div className="App">
       <Navbar />
@@ -62,7 +69,15 @@ export default function ProjectDetail() {
             <ArrowLeft className="h-4 w-4" /> Semua proyek
           </button>
           <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white">{project.name}</h1>
-          <p className="flex items-center gap-1.5 text-white/85 mt-1"><MapPin className="h-4 w-4" /> {project.location} · {project.developer_name}</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1.5">
+            <p className="flex items-center gap-1.5 text-white/85"><MapPin className="h-4 w-4" /> {project.location} · {project.developer_name}</p>
+            {project.lat != null && project.lng != null && (
+              <a href={projectMapsUrl} target="_blank" rel="noreferrer" data-testid="project-gps-pin"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/90 hover:bg-white text-[hsl(var(--primary))] text-xs font-semibold px-3 py-1.5 transition-colors shadow-sm">
+                <MapPinned className="h-3.5 w-3.5" /> Pin Lokasi Proyek di Maps
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
@@ -148,18 +163,31 @@ export default function ProjectDetail() {
                   testid="unit-detail-location-map" className="h-48 rounded-lg border border-slate-200" />
               </div>
             )}
+            {projectMapsUrl && (
+              <div className="flex flex-wrap gap-2">
+                <a href={projectMapsUrl} target="_blank" rel="noreferrer" data-testid="unit-detail-project-pin"
+                  className="flex-1 min-w-[160px] flex items-center justify-between gap-2 rounded-lg border border-[hsl(var(--primary))]/30 bg-[hsl(var(--secondary))]/40 px-4 py-3 text-sm hover:bg-[hsl(var(--secondary))]/70 transition-colors">
+                  <span className="flex items-center gap-2 text-slate-700"><MapPinned className="h-4 w-4 text-[hsl(var(--primary))]" /> Pin lokasi proyek {project.name}</span>
+                  <span className="text-[hsl(var(--primary))] font-medium whitespace-nowrap">Lihat →</span>
+                </a>
+                <a href={projectRouteUrl} target="_blank" rel="noreferrer" data-testid="unit-detail-project-route"
+                  className="flex items-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-4 py-3 text-sm font-medium text-white hover:bg-[hsl(var(--primary))]/90 transition-colors">
+                  <Route className="h-4 w-4" /> Rute ke proyek
+                </a>
+              </div>
+            )}
             {unitDetail?.gps_coordinates && (
               <div className="flex flex-wrap gap-2">
                 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(unitDetail.gps_coordinates)}`}
                   target="_blank" rel="noreferrer" data-testid="unit-detail-gps-link"
-                  className="flex-1 min-w-[160px] flex items-center justify-between gap-2 rounded-lg border border-[hsl(var(--primary))]/30 bg-[hsl(var(--secondary))]/40 px-4 py-3 text-sm hover:bg-[hsl(var(--secondary))]/70 transition-colors">
-                  <span className="flex items-center gap-2 text-slate-700"><Navigation className="h-4 w-4 text-[hsl(var(--primary))]" /> {unitDetail.gps_coordinates}</span>
-                  <span className="text-[hsl(var(--primary))] font-medium whitespace-nowrap">Lihat →</span>
+                  className="flex-1 min-w-[160px] flex items-center justify-between gap-2 rounded-lg border border-[hsl(var(--accent))]/30 bg-amber-50/50 px-4 py-3 text-sm hover:bg-amber-50 transition-colors">
+                  <span className="flex items-center gap-2 text-slate-700"><Navigation className="h-4 w-4 text-[hsl(var(--accent))]" /> Pin GPS unit: {unitDetail.gps_coordinates}</span>
+                  <span className="text-[hsl(var(--accent))] font-medium whitespace-nowrap">Lihat →</span>
                 </a>
                 <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(unitDetail.gps_coordinates)}&travelmode=driving`}
                   target="_blank" rel="noreferrer" data-testid="unit-detail-route-btn"
-                  className="flex items-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-4 py-3 text-sm font-medium text-white hover:bg-[hsl(var(--primary))]/90 transition-colors">
-                  <Route className="h-4 w-4" /> Rute ke lokasi
+                  className="flex items-center gap-2 rounded-lg bg-[hsl(var(--accent))] px-4 py-3 text-sm font-medium text-white hover:bg-[hsl(var(--accent))]/90 transition-colors">
+                  <Route className="h-4 w-4" /> Rute ke unit
                 </a>
               </div>
             )}

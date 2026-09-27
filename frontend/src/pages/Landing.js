@@ -12,7 +12,7 @@ import {
 } from "../components/ui/select";
 import {
   ShieldCheck, FileText, Building2, Landmark, ArrowRight,
-  MapPin, CheckCircle2, Wallet, MessagesSquare, SlidersHorizontal, X,
+  MapPin, MapPinned, CheckCircle2, Wallet, MessagesSquare, SlidersHorizontal, X,
 } from "lucide-react";
 
 const HERO = "https://images.pexels.com/photos/3918373/pexels-photo-3918373.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=900&w=1400";
@@ -231,9 +231,18 @@ export default function Landing() {
                 </div>
                 <div className="p-5 flex-1 flex flex-col">
                   <h3 className="font-heading text-xl font-semibold text-slate-800">{p.name}</h3>
-                  <p className="flex items-center gap-1.5 text-sm text-slate-500 mt-1">
-                    <MapPin className="h-4 w-4" /> {p.location}
-                  </p>
+                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5 mt-1">
+                    <p className="flex items-center gap-1.5 text-sm text-slate-500">
+                      <MapPin className="h-4 w-4" /> {p.location}
+                    </p>
+                    {p.lat != null && p.lng != null && (
+                      <button type="button" data-testid={`card-gps-pin-${p.id}`}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`, "_blank", "noopener"); }}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--primary))] hover:underline">
+                        <MapPinned className="h-3.5 w-3.5" /> Pin GPS
+                      </button>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-500 mt-3 line-clamp-2">{p.description}</p>
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
                     <span className="text-sm text-slate-600">

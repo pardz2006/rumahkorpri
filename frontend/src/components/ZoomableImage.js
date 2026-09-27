@@ -7,20 +7,30 @@ export function ZoomableImage({ src, alt, label, className, testid }) {
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
   const drag = useRef(null);
 
   const reset = useCallback(() => { setScale(1); setPos({ x: 0, y: 0 }); }, []);
   const openLightbox = () => { reset(); setOpen(true); };
-  const zoomIn = () => setScale((s) => Math.min(s + 0.5, 5));
+  const zoomIn = () => setScale((s) => Math.min(s + 0.5, 6));
   const zoomOut = () => setScale((s) => { const n = Math.max(s - 0.5, 1); if (n === 1) setPos({ x: 0, y: 0 }); return n; });
 
   const onWheel = (e) => {
     e.preventDefault();
-    setScale((s) => { const n = Math.min(Math.max(s + (e.deltaY < 0 ? 0.3 : -0.3), 1), 5); if (n === 1) setPos({ x: 0, y: 0 }); return n; });
+    setScale((s) => { const n = Math.min(Math.max(s + (e.deltaY < 0 ? 0.3 : -0.3), 1), 6); if (n === 1) setPos({ x: 0, y: 0 }); return n; });
   };
-  const onDown = (e) => { if (scale <= 1) return; const t = e.touches ? e.touches[0] : e; drag.current = { x: t.clientX - pos.x, y: t.clientY - pos.y }; };
-  const onMove = (e) => { if (!drag.current) return; const t = e.touches ? e.touches[0] : e; setPos({ x: t.clientX - drag.current.x, y: t.clientY - drag.current.y }); };
-  const onUp = () => { drag.current = null; };
+  const onDown = (e) => {
+    if (scale <= 1) return;
+    const t = e.touches ? e.touches[0] : e;
+    drag.current = { x: t.clientX - pos.x, y: t.clientY - pos.y };
+    setDragging(true);
+  };
+  const onMove = (e) => {
+    if (!drag.current) return;
+    const t = e.touches ? e.touches[0] : e;
+    setPos({ x: t.clientX - drag.current.x, y: t.clientY - drag.current.y });
+  };
+  const onUp = () => { drag.current = null; setDragging(false); };
 
   const resolved = mediaUrl(src);
 
@@ -46,15 +56,20 @@ export function ZoomableImage({ src, alt, label, className, testid }) {
             </div>
           )}
           <div
-            className="relative h-[80vh] w-full overflow-hidden grid place-items-center select-none"
+            className="relative h-[80vh] w-full overflow-hidden grid place-items-center select-none touch-none"
             onWheel={onWheel} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
             onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
-            style={{ cursor: scale > 1 ? (drag.current ? "grabbing" : "grab") : "zoom-in" }}
+            style={{ cursor: scale > 1 ? (dragging ? "grabbing" : "grab") : "zoom-in" }}
             onClick={() => { if (scale === 1) zoomIn(); }}>
             <img src={resolved} alt={alt} draggable={false}
-              className="max-h-full max-w-full object-contain transition-transform duration-150"
-              style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})` }} />
+              className="max-h-full max-w-full object-contain"
+              style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`, transition: dragging ? "none" : "transform 150ms ease-out" }} />
           </div>
+          {scale > 1 && (
+            <span className="absolute top-3 left-1/2 -translate-x-1/2 z-10 text-[11px] text-white/90 bg-black/50 rounded-full px-3 py-1 pointer-events-none">
+              Seret gambar untuk menggeser
+            </span>
+          )}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/60 backdrop-blur rounded-full px-2 py-1.5">
             <button onClick={zoomOut} data-testid="zoom-out-btn" className="h-9 w-9 grid place-items-center rounded-full text-white hover:bg-white/15 transition-colors"><ZoomOut className="h-5 w-5" /></button>
             <span className="text-white text-xs font-medium tabular-nums w-12 text-center">{Math.round(scale * 100)}%</span>
